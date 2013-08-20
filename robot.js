@@ -1,4 +1,3 @@
-'use strict'
 
 var robot = {}
 robot.x = 400.0
@@ -48,7 +47,7 @@ function updateRobotPosition () {
   var robot_div = document.getElementById('robot')
   robot_div.style.left = robot.x + 'px'
   robot_div.style.top  = robot.y + 'px'
-  var filename = theme + (360 - Math.floor(degreesOf(robot.theta))) + '.jpg'
+  var filename = theme + (359 - Math.floor(degreesOf(robot.theta))) + '.jpg'
   filename = resolveURL(filename)
   var robot_image = document.getElementById('robot-image')
   if (robot_image.src != filename) {
