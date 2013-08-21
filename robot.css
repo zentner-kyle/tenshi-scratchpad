@@ -1,10 +1,54 @@
+body {
+  font-family: helvetica;
+  font-weight: bold;
+  }
+
+[draggable] {
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  /*user-select: none;*/
+  /* Required to make elements draggable in old WebKit */
+  -khtml-user-drag: element;
+  -webkit-user-drag: element;
+}
+
 .big-box {
-  width:800px;
-  height:800px;
   border:4px solid;
-  background-color:gray;
+  background-color:#cccccc;
   border-radius:10px;
   box-shadow:inset 0 0 10px 10px #444;
+  height:800px;
+  padding:10px;
+  }
+
+#field {
+  width:800px;
+  }
+
+#palette {
+  width:200px;
+  }
+
+#editor {
+  width:600px;
+  }
+
+.center {
+  margin-left:auto;
+  margin-right:auto;
+  }
+
+.drag-box {
+  width:170px;
+  border: 2px solid;
+  border-color: #777777;
+  background-color:#eeeeee;
+  box-shadow:inset 0 0 5px 5px #333333;
+  border-radius:4px;
+  padding:8px;
+  margin:3px;
+  cursor: move;
   }
 
 .robot {

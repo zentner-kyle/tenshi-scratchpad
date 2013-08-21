@@ -7,9 +7,9 @@ robot.width = 10.0
 robot.lspeed = .09
 robot.rspeed = .1
 
-function drive(robot, lspeed, rspeed, delta_t) {
-  var ldiff = lspeed * delta_t
-  , rdiff = rspeed * delta_t
+function drive(robot, delta_t) {
+  var ldiff = robot.lspeed * delta_t
+  , rdiff = robot.rspeed * delta_t
   , omega = (rdiff - ldiff) / robot.width
   , v = (rdiff + ldiff) / 2.0
   robot.x += v * Math.cos(robot.theta)
@@ -54,7 +54,20 @@ function updateRobotPosition () {
     robot_image.src = filename
     }
   var waitTime = 15
-  drive(robot, robot.lspeed, robot.rspeed, waitTime)
+  drive(robot, waitTime)
   window.setTimeout(updateRobotPosition, waitTime)
   }
 updateRobotPosition()
+
+
+function handleDragStart(e) {
+  //e.target.style.opacity = 0.0
+  e.target.innerHTML = ""
+  e.dataTransfer.setData('Text', this.id)
+  }
+
+var dragItems = document.querySelectorAll('[draggable=true]')
+
+;[].forEach.call(dragItems, function (draggable) {
+  draggable.addEventListener('dragstart', handleDragStart, false)
+  })
