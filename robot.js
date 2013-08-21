@@ -24,50 +24,27 @@ function degreesOf(radians) {
 var theme = 'pegman'
 theme = theme + '/'
 
-function resolveURL(url, base_url) {
-  var doc = document
-  , old_base = doc.getElementsByTagName('base')[0]
-  , old_href = old_base && old_base.href
-  , doc_head = doc.head || doc.getElementsByTagName('head')[0]
-  , our_base = old_base || doc_head.appendChild(doc.createElement('base'))
-  , resolver = doc.createElement('a')
-  , resolved_url
-  ;
-  our_base.href = base_url
-  resolver.href = url
-  resolved_url = resolver.href
-   
-  if (old_base) old_base.href = old_href
-  else doc_head.removeChild(our_base)
-   
-  return resolved_url
+function getRobotImageName(degrees) {
+  return theme + degrees + '.jpg'
+  }
+
+var maxAngle = 359
+var robotImages = new Array()
+for (var i = 0; i <= maxAngle; i++) {
+  robotImages[i] = new Image()
+  robotImages[i].src = getRobotImageName(i)
+  robotImages[i].id = 'robot-image'
   }
 
 function updateRobotPosition () {
   var robot_div = document.getElementById('robot')
   robot_div.style.left = robot.x + 'px'
   robot_div.style.top  = robot.y + 'px'
-  var filename = theme + (359 - Math.floor(degreesOf(robot.theta))) + '.jpg'
-  filename = resolveURL(filename)
+  var degrees = (359 - Math.floor(degreesOf(robot.theta)))
   var robot_image = document.getElementById('robot-image')
-  if (robot_image.src != filename) {
-    robot_image.src = filename
-    }
+  robot_div.replaceChild(robotImages[degrees], robot_image)
   var waitTime = 15
   drive(robot, waitTime)
   window.setTimeout(updateRobotPosition, waitTime)
   }
 updateRobotPosition()
-
-
-function handleDragStart(e) {
-  //e.target.style.opacity = 0.0
-  e.target.innerHTML = ""
-  e.dataTransfer.setData('Text', this.id)
-  }
-
-var dragItems = document.querySelectorAll('[draggable=true]')
-
-;[].forEach.call(dragItems, function (draggable) {
-  draggable.addEventListener('dragstart', handleDragStart, false)
-  })
