@@ -1,9 +1,9 @@
 
 function createRobotPhysics ( world, robot ) {
   var fixDef = new Box2D.Dynamics.b2FixtureDef
-  fixDef.density = 100.0
-  fixDef.friction = 0.5
-  fixDef.restitution = 0.2
+  fixDef.density = 0.1
+  fixDef.friction = 0.9
+  fixDef.restitution = 0.01
   fixDef.shape = new Box2D.Collision.Shapes.b2PolygonShape
   fixDef.shape.SetAsBox ( robot.width / 2, robot.width / 2 )
   var bodyDef = new Box2D.Dynamics.b2BodyDef
@@ -15,35 +15,10 @@ function createRobotPhysics ( world, robot ) {
   return body
   }
 
-function toPixels (cord) {
-  return cord
-  return (cord - 1.8) / 30
-  }
-
-//var View = function (old) {
-  //return {
-    //x: 0.0,
-    //y: 0.0,
-    //pixelsPerMeter: 30,
-    //fromMeters: function (x, y) {
-      //var x_px = (x + this.x) * this.pixelsPerMeter
-      //var y_px = (y + this.y) * this.pixelsPerMeter
-      //return [x_px, y_px]
-      //},
-    //fromPixels: function (x, y) {
-      //var x_m = (x / this.pixelsPerMeter) - this.x
-      //var y_m = (y / this.pixelsPerMeter) - this.y
-      //return [x_m, y_m]
-      //}
-    //}
-  //};
-
-//var view = new View;
-
 var view = {
   x: 0.0,
   y: 0.0,
-  pixelsPerMeter: 30,
+  pixelsPerMeter: 30.0,
   fromMeters: function (x, y) {
     var x_px = (x + this.x) * this.pixelsPerMeter
     var y_px = (y + this.y) * this.pixelsPerMeter
@@ -74,23 +49,86 @@ var view = {
     }
   };
 
-(function() {
-  //var paper = Raphael(document.getElementById('raphael-container'), 800, 800)
-  var paper = Raphael(0, 0, 800, 800)
+function vectorOfArray (array) {
+  return Box2D.Common.Math.b2Vec2.Make (array[0], array[1])
+  }
 
-  var robot = {}
-  robot.x = view.xFromPixels ( 200 )
-  robot.y = view.yFromPixels ( 200 )
-  robot.theta = 0.0
-  robot.width = 1.0
-  robot.lspeed = .09
-  robot.rspeed = .1
+function arrayAngle ( angle ) {
+    return [Math.cos ( angle ), Math.sin ( angle )]
+  }
+
+function vectorAngle (angle) {
+  return Box2D.Common.Math.b2Vec2.Make ( Math.cos ( angle ), Math.sin ( angle ) )
+  }
+
+function vectorAngleMag (angle, magnitude) {
+  return Box2D.Common.Math.b2Vec2.Make ( magnitude * Math.cos ( angle ),
+                                         magnitude * Math.sin ( angle ) )
+  }
+
+(function() {
+  var width = 800
+  var height = 800
+  var paper = Raphael(document.getElementById('raphael-container'), width, height)
+  //var paper = Raphael(0, 0, width, height)
+
+  var robot = {
+  x: view.xFromPixels ( width / 4 ),
+  y: view.yFromPixels ( height / 4 ),
+  theta: 0.0,
+  width: (1.0 + Math.random()) * 1.5,
+  lspeed: 0.07,
+  rspeed: 0.1,
+  rightWheelPos: function ( ) {
+    //console.log(360 + degreesOf(this.theta))
+    var vec = arrayAngle ( this.theta + Math.PI * 0.5 )
+    vec[0] *= this.width / 2;
+    vec[1] *= this.width / 2;
+    return [vec[0] + this.x, vec[1] + this.y]
+    //return [
+            //this.x + (this.width / 2) * Math.sin (-this.theta + Math.PI * 0.0),
+            //this.y + (this.width / 2) * Math.cos (-this.theta + Math.PI * 0.0)
+           //]
+    },
+  leftWheelPos: function ( ) {
+    var vec = arrayAngle ( this.theta - Math.PI * 0.5 )
+    vec[0] *= this.width / 2;
+    vec[1] *= this.width / 2;
+    return [vec[0] + this.x, vec[1] + this.y]
+    //return this.rightWheelPos ( )
+    //return [
+            //this.x - (this.width / 2) * Math.sin(-this.theta + Math.PI * 0.0),
+            //this.y - (this.width / 2) * Math.cos(-this.theta + Math.PI * 0.0)
+           //]
+    },
+  forward: function ( ) {
+    return [Math.cos ( this.angle ), Math.sin ( this.angle )]
+    }
+  }
 
   var robotRect = paper.rect(0, 0,
     view.scaleMeters ( robot.width ),
-    view.scaleMeters ( robot.width ), 4)
+    view.scaleMeters ( robot.width ), 0)
   robotRect.attr('fill', '#333')
   robotRect.attr('stroke', '#000')
+
+  var robotCenterWidthPx = 8
+  var robotCenter = paper.rect(0, 0, robotCenterWidthPx, robotCenterWidthPx, 4)
+  robotCenter.attr('fill', '#f33')
+  robotCenter.attr('stroke', '#000')
+  robotCenter.toFront()
+
+  var wheelWidth = robot.width / 4
+  var wheelWidthPx = view.scaleMeters ( wheelWidth )
+  var leftWheelRect = paper.rect(0, 0,
+    wheelWidthPx, wheelWidthPx, 4)
+  leftWheelRect.attr('fill', '#338')
+  leftWheelRect.attr('stroke', '#000')
+
+  var rightWheelRect = paper.rect(0, 0,
+    wheelWidthPx, wheelWidthPx, 4)
+  rightWheelRect.attr('fill', '#338')
+  rightWheelRect.attr('stroke', '#000')
 
 
   function drive(robot, delta_t) {
@@ -110,24 +148,6 @@ var view = {
   var lastWaitTime = 15
   var maxAngle = 359
 
-  //function robotActivity (robot) {
-    //return Math.sqrt(robot.lspeed * robot.lspeed + robot.rspeed * robot.rspeed) / 2
-    //}
-
-  //function updateRobotPosition (robotRect) {
-    //var waitTime = 15
-    //drive(robot, waitTime)
-    //var degrees = Math.floor(degreesOf(robot.theta))
-    //robotRect.transform('t' + robot.x + ',' + robot.y + 'r' + degrees)
-    //if (robotActivity (robot) == 0) {
-      //window.setTimeout(function () {updateRobotPosition (robotRect)}, 500)
-      //}
-    //else {
-      //window.setTimeout(function () {updateRobotPosition (robotRect)}, waitTime)
-      //}
-    //}
-  //updateRobotPosition(robotRect)
-
   var b2Vec2 = Box2D.Common.Math.b2Vec2
    ,  b2AABB = Box2D.Collision.b2AABB
    ,  b2BodyDef = Box2D.Dynamics.b2BodyDef
@@ -137,17 +157,16 @@ var view = {
    ,  b2World = Box2D.Dynamics.b2World
    ,  b2MassData = Box2D.Collision.Shapes.b2MassData
    ,  b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
-   ,  b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
-   ,  b2DebugDraw = Box2D.Dynamics.b2DebugDraw
    ,  b2MouseJointDef =  Box2D.Dynamics.Joints.b2MouseJointDef
+   ,  b2DebugDraw = Box2D.Dynamics.b2DebugDraw
  
  var world = new b2World(
-       new b2Vec2(0, 10)
+       new b2Vec2(0, 0)
      , true
      )
  
   var fixDef = new b2FixtureDef
-  fixDef.density = 1.0
+  fixDef.density = 0.1
   fixDef.friction = 0.5
   fixDef.restitution = 0.2
  
@@ -155,46 +174,26 @@ var view = {
  
   bodyDef.type = b2Body.b2_staticBody;
   fixDef.shape = new b2PolygonShape;
-  fixDef.shape.SetAsBox(view.scalePixels (800), view.scalePixels (10));
+  fixDef.shape.SetAsBox(view.scalePixels (800), view.scalePixels (0));
   bodyDef.position.Set(view.scalePixels (400), view.scalePixels (800));
   world.CreateBody(bodyDef).CreateFixture(fixDef);
-  bodyDef.position.Set(10, -1.8);
+  bodyDef.position.Set(view.scalePixels (400), view.scalePixels(0));
   world.CreateBody(bodyDef).CreateFixture(fixDef);
-  fixDef.shape.SetAsBox(2, 14);
-  bodyDef.position.Set(-1.8, 13);
+  fixDef.shape.SetAsBox(view.scalePixels(0), view.scalePixels(800));
+  bodyDef.position.Set(view.scalePixels(0), view.scalePixels(400));
   world.CreateBody(bodyDef).CreateFixture(fixDef);
-  bodyDef.position.Set(800 / 30 + 1.8, 13);
+  bodyDef.position.Set(view.scalePixels(800), view.scalePixels(0));
   world.CreateBody(bodyDef).CreateFixture(fixDef);
-
-  var debugBody
-  //create some objects
-  bodyDef.type = b2Body.b2_dynamicBody;
-  for(var i = 0; i < 10; ++i) {
-     if(Math.random() > 0.5) {
-        fixDef.shape = new b2PolygonShape;
-        fixDef.shape.SetAsBox(
-              Math.random() + 0.1 //half width
-           ,  Math.random() + 0.1 //half height
-        );
-     } else {
-        fixDef.shape = new b2CircleShape(
-           Math.random() + 0.1 //radius
-        );
-     }
-     bodyDef.position.x = Math.random() * 10;
-     bodyDef.position.y = Math.random() * 10;
-     debugBody = world.CreateBody(bodyDef)
-     debugBody.CreateFixture(fixDef);
-  }
-
-
+         
+  //setup debug draw
   var debugDraw = new b2DebugDraw();
-                  debugDraw.SetSprite(document.getElementById("canvas").getContext("2d"));
-                  debugDraw.SetDrawScale(30.0);
-                  debugDraw.SetFillAlpha(0.5);
-                  debugDraw.SetLineThickness(1.0);
-                  debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit);
-                  world.SetDebugDraw(debugDraw);
+  debugDraw.SetSprite(document.getElementById("canvas").getContext("2d"));
+  debugDraw.SetDrawScale(view.pixelsPerMeter);
+  debugDraw.SetFillAlpha(0.5);
+  debugDraw.SetLineThickness(1.0);
+  debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit);
+  world.SetDebugDraw(debugDraw);
+
   var robotBody = createRobotPhysics ( world, robot )
 
   function updateRobot ( ) {
@@ -202,15 +201,99 @@ var view = {
     robot.x = pos.x
     robot.y = pos.y
     var degrees = degreesOf ( robotBody.GetAngle ( ) )
-    robotRect.transform('t' + view.xFromMeters(robot.x) + ',' +
-                              view.yFromMeters(robot.y) +
-                        'r' + degrees)
+    robotRect.attr('transform', ['R', degrees])
+    //robotRect.transform(['R', degrees])
+    //console.log('width ' + robot.width)
+    //console.log('width / 2 ' + robot.width / 2)
+    //console.log('x_px ' + view.xFromMeters(robot.x - robot.width / 2))
+    //robotRect.attr('x', view.xFromMeters(robot.x + .5 - robot.width / 2))
+    //robotRect.attr('y', view.yFromMeters(robot.y + .5 - robot.width / 2))
+    robotRect.attr('x', view.xFromMeters(robot.x - robot.width / 2))
+    robotRect.attr('y', view.yFromMeters(robot.y - robot.width / 2))
+    //robotRect.transform('T' + view.scaleMeters(robot.x) + ',' +
+                              //view.scaleMeters(robot.y))
+                        //+ 'r' + degrees)
     }
 
-  function update() {
+  function render ( ) {
+    //updateRobot ( )
+    var pos = robotBody.GetPosition ( )
+    robot.x = pos.x
+    robot.y = pos.y
+    robot.theta = robotBody.GetAngle ( )
+    var degrees = degreesOf ( robot.theta )
+    var rotate = ['R', degrees]
+    //var rotate = ['R', degrees
+                     ////,view.scaleMeters ( robot.x + robot.width / 2 )
+                     ////,view.scaleMeters ( robot.y + robot.width / 2 )
+                     //,view.xFromMeters ( robot.x - robot.width / Math.floor(robot.width))
+                     //,view.yFromMeters ( robot.y - robot.width / Math.floor(robot.width))
+                     //]
+    //var rotate = []
+    ////var rotate = ['R', degrees
+                     //////,view.scaleMeters ( robot.x + robot.width / 2 )
+                     //////,view.scaleMeters ( robot.y + robot.width / 2 )
+                     ////,view.scaleMeters ( robot.width )
+                     ////,view.scaleMeters ( robot.width )]
+    //var transform = rotate
+                    //+ ['t'
+                      //,view.xFromMeters ( robot.x - robot.width / Math.floor(robot.width))
+                      //,view.yFromMeters ( robot.y - robot.width / Math.floor(robot.width))]
+    ////var transformCenter =
+                    ////['t',
+                     ////view.xFromMeters(robot.x - robot.width / 3),
+                     ////view.yFromMeters(robot.y - robot.width / 3)]
+    var loc = [ view.xFromMeters(robot.x - robot.width / 2),
+                view.yFromMeters(robot.y - robot.width / 2)]
+    var cloc = [ view.xFromMeters(robot.x),
+                 view.yFromMeters(robot.y)]
+    robotRect.attr('transform', rotate)
+    robotRect.attr('x', loc[0])
+    robotRect.attr('y', loc[1])
+    //robotRect.transform(transform)
+    //robotRect.attr('x', loc[0])
+    //robotRect.attr('y', loc[1])
+    robotCenter.attr('x', cloc[0] - robotCenterWidthPx / 2)
+    robotCenter.attr('y', cloc[1] - robotCenterWidthPx / 2)
+    ////robotCenter.transform(transformCenter)
+    var lwpos = robot.leftWheelPos ( )
+    //var lwrot = ['R', degrees]
+                     //,view.xFromMeters ( lwpos[0] - wheelWidth / 2),
+                      //view.yFromMeters ( lwpos[1] - wheelWidth / 2)]
+    leftWheelRect.attr('transform', rotate)
+    leftWheelRect.attr('x', view.xFromMeters ( lwpos[0] - wheelWidth / 2))
+    leftWheelRect.attr('y', view.yFromMeters ( lwpos[1] - wheelWidth / 2))
+
+    var rwpos = robot.rightWheelPos ( )
+    rightWheelRect.attr('transform', rotate)
+    rightWheelRect.attr('x', view.xFromMeters ( rwpos[0] - wheelWidth / 2))
+    rightWheelRect.attr('y', view.yFromMeters ( rwpos[1] - wheelWidth / 2))
+    //+ ['t', view.xFromMeters ( lwpos[0] ),
+                                                  //view.yFromMeters ( lwpos[1] )])
+    ////lwpos[0] -= wheelWidth / 4;
+    //lwpos[1] -= wheelWidth / 4;
+    //leftWheelRect.transform( lwrot + ['t', view.xFromMeters ( lwpos[0] ),
+                                  //view.yFromMeters ( lwpos[1] )])
+    //rwpos[1] += wheelWidth / 4;
+    //var rwrot = ['R', degrees,
+                      //view.xFromMeters ( rwpos[0] ),
+                      //view.yFromMeters ( rwpos[1] )]
+    //rightWheelRect.transform(rwrot + ['t', view.xFromMeters ( rwpos[0] ),
+                                           //view.yFromMeters ( rwpos[1] )])
+    }
+
+  function applyForces ( ) {
+    robotBody.ApplyForce ( vectorAngleMag ( robot.theta, robot.lspeed ),
+                           vectorOfArray ( robot.leftWheelPos ( ) ) )
+    robotBody.ApplyForce ( vectorAngleMag ( robot.theta, robot.rspeed ),
+                           vectorOfArray ( robot.rightWheelPos ( ) ) )
+    }
+
+  function update ( ) {
+    applyForces ( )
     world.Step(1 / 60, 10, 10)
-    world.DrawDebugData()
-    updateRobot ( )
+    render ( )
+    world.DrawDebugData();
     world.ClearForces()
     }
   window.setInterval(update, 1000 / 60);
