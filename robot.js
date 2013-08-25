@@ -12,6 +12,59 @@ function createRobotPhysics ( world, robot ) {
   bodyDef.position.y = robot.y
   var body = world.CreateBody(bodyDef)
   body.CreateFixture(fixDef)
+
+  //var fixDef2 = new Box2D.Dynamics.b2FixtureDef
+  //fixDef2.density = 0.1
+  //fixDef2.friction = 0.9
+  //fixDef2.restitution = 0.01
+  //fixDef2.shape = new Box2D.Collision.Shapes.b2PolygonShape
+  //fixDef2.shape.SetAsBox ( .01, .01 )
+
+  //var body2Def = new Box2D.Dynamics.b2BodyDef
+  //body2Def.type = Box2D.Dynamics.b2Body.b2_staticBody
+  //body2Def.position.x = 0
+  //body2Def.position.y = 0
+  //var body2 = world.CreateBody(bodyDef)
+  //body2.CreateFixture(fixDef2)
+
+  var frictionDef = new Box2D.Dynamics.Joints.b2FrictionJointDef;
+  frictionDef.bodyA = world.GetGroundBody ( )
+  frictionDef.bodyB = body
+  frictionDef.localAnchorB = vectorOfArray ( robot.leftWheelLocalPos ( ) )
+  frictionDef.maxForce = 0.05
+  frictionDef.maxTorque = 0.005
+  var frictionJoint = world.CreateJoint(frictionDef)
+  frictionJoint.m_linearMass = Box2D.Common.Math.b2Mat22.FromAngle ( robot.theta + Math.PI * 0.5)
+  //frictionDef.maxForce = 0.
+  //frictionJoint.m_linearMass.col1 = vectorOfArray([0, 100])
+  //frictionJoint.m_linearMass.col2 = vectorOfArray([0, 100])
+  //console.log(frictionJoint.m_linearMass.col1)
+  //console.log(frictionJoint.m_linearMass.col2)
+  //frictionJoint.m_linearMass = Box2D.Common.Math.b2Mat22.FromAngle ( robot.theta )
+  //var v = vectorOfArray([+0, -1])
+  //v.MulM(frictionJoint.m_linearMass)
+  //console.log(v)
+  //frictionJoint.m_linearMass.col1.Multiply(0)
+  //frictionJoint.m_linearMass.col2.Multiply(0)
+
+  frictionDef.localAnchorB = vectorOfArray ( robot.rightWheelLocalPos ( ) )
+  frictionJoint = world.CreateJoint(frictionDef)
+  frictionJoint.m_linearMass = Box2D.Common.Math.b2Mat22.FromAngle ( robot.theta + Math.PI * 0.5 )
+  //frictionJoint.m_linearMass.col1 = vectorOfArray([0, 100])
+  //frictionJoint.m_linearMass.col2 = vectorOfArray([0, 100])
+  //frictionJoint.m_linearMass.col1.Multiply(0)
+  //frictionJoint.m_linearMass.col2.Multiply(0)
+
+  //console.log(frictionDef.bodyA)
+  //frictionDef.bd
+  //( body, body2, vectorOfArray ( robot.leftWheelPos ( ) ) )
+  //console.log(robot.leftWheelLocalPos ( ) )
+  //frictionDef.maxForce = 100
+  //frictionDef.maxTorque = 100
+
+  //frictionDef.localAnchorA = 
+  //frictionDef.Intialize ( body, null, vectorOfArray ( robot.leftWheelPos ( ) ) )
+  //var frictionJoint = world.CreateJoint(frictionDef)
   return body
   }
 
@@ -73,33 +126,35 @@ function vectorAngleMag (angle, magnitude) {
   //var paper = Raphael(0, 0, width, height)
 
   var robot = {
-  x: view.xFromPixels ( width / 4 ),
+  x: view.xFromPixels ( width / 2 ),
   y: view.yFromPixels ( height / 4 ),
   theta: 0.0,
   width: (1.0 + Math.random()) * 1.5,
-  lspeed: 0.07,
-  rspeed: 0.1,
+  lspeed: 0.1,
+  rspeed: 0.07,
+  rightWheelLocalPos: function ( ) {
+    var vec = arrayAngle ( this.theta + Math.PI * 0.5 )
+    vec[0] *= this.width / 2;
+    vec[1] *= this.width / 2;
+    return vec
+    },
   rightWheelPos: function ( ) {
-    //console.log(360 + degreesOf(this.theta))
     var vec = arrayAngle ( this.theta + Math.PI * 0.5 )
     vec[0] *= this.width / 2;
     vec[1] *= this.width / 2;
     return [vec[0] + this.x, vec[1] + this.y]
-    //return [
-            //this.x + (this.width / 2) * Math.sin (-this.theta + Math.PI * 0.0),
-            //this.y + (this.width / 2) * Math.cos (-this.theta + Math.PI * 0.0)
-           //]
+    },
+  leftWheelLocalPos: function ( ) {
+    var vec = arrayAngle ( this.theta - Math.PI * 0.5 )
+    vec[0] *= this.width / 2;
+    vec[1] *= this.width / 2;
+    return vec
     },
   leftWheelPos: function ( ) {
     var vec = arrayAngle ( this.theta - Math.PI * 0.5 )
     vec[0] *= this.width / 2;
     vec[1] *= this.width / 2;
     return [vec[0] + this.x, vec[1] + this.y]
-    //return this.rightWheelPos ( )
-    //return [
-            //this.x - (this.width / 2) * Math.sin(-this.theta + Math.PI * 0.0),
-            //this.y - (this.width / 2) * Math.cos(-this.theta + Math.PI * 0.0)
-           //]
     },
   forward: function ( ) {
     return [Math.cos ( this.angle ), Math.sin ( this.angle )]
@@ -196,53 +251,13 @@ function vectorAngleMag (angle, magnitude) {
 
   var robotBody = createRobotPhysics ( world, robot )
 
-  function updateRobot ( ) {
-    var pos = robotBody.GetPosition ( )
-    robot.x = pos.x
-    robot.y = pos.y
-    var degrees = degreesOf ( robotBody.GetAngle ( ) )
-    robotRect.attr('transform', ['R', degrees])
-    //robotRect.transform(['R', degrees])
-    //console.log('width ' + robot.width)
-    //console.log('width / 2 ' + robot.width / 2)
-    //console.log('x_px ' + view.xFromMeters(robot.x - robot.width / 2))
-    //robotRect.attr('x', view.xFromMeters(robot.x + .5 - robot.width / 2))
-    //robotRect.attr('y', view.yFromMeters(robot.y + .5 - robot.width / 2))
-    robotRect.attr('x', view.xFromMeters(robot.x - robot.width / 2))
-    robotRect.attr('y', view.yFromMeters(robot.y - robot.width / 2))
-    //robotRect.transform('T' + view.scaleMeters(robot.x) + ',' +
-                              //view.scaleMeters(robot.y))
-                        //+ 'r' + degrees)
-    }
-
   function render ( ) {
-    //updateRobot ( )
     var pos = robotBody.GetPosition ( )
     robot.x = pos.x
     robot.y = pos.y
     robot.theta = robotBody.GetAngle ( )
     var degrees = degreesOf ( robot.theta )
     var rotate = ['R', degrees]
-    //var rotate = ['R', degrees
-                     ////,view.scaleMeters ( robot.x + robot.width / 2 )
-                     ////,view.scaleMeters ( robot.y + robot.width / 2 )
-                     //,view.xFromMeters ( robot.x - robot.width / Math.floor(robot.width))
-                     //,view.yFromMeters ( robot.y - robot.width / Math.floor(robot.width))
-                     //]
-    //var rotate = []
-    ////var rotate = ['R', degrees
-                     //////,view.scaleMeters ( robot.x + robot.width / 2 )
-                     //////,view.scaleMeters ( robot.y + robot.width / 2 )
-                     ////,view.scaleMeters ( robot.width )
-                     ////,view.scaleMeters ( robot.width )]
-    //var transform = rotate
-                    //+ ['t'
-                      //,view.xFromMeters ( robot.x - robot.width / Math.floor(robot.width))
-                      //,view.yFromMeters ( robot.y - robot.width / Math.floor(robot.width))]
-    ////var transformCenter =
-                    ////['t',
-                     ////view.xFromMeters(robot.x - robot.width / 3),
-                     ////view.yFromMeters(robot.y - robot.width / 3)]
     var loc = [ view.xFromMeters(robot.x - robot.width / 2),
                 view.yFromMeters(robot.y - robot.width / 2)]
     var cloc = [ view.xFromMeters(robot.x),
@@ -250,16 +265,9 @@ function vectorAngleMag (angle, magnitude) {
     robotRect.attr('transform', rotate)
     robotRect.attr('x', loc[0])
     robotRect.attr('y', loc[1])
-    //robotRect.transform(transform)
-    //robotRect.attr('x', loc[0])
-    //robotRect.attr('y', loc[1])
     robotCenter.attr('x', cloc[0] - robotCenterWidthPx / 2)
     robotCenter.attr('y', cloc[1] - robotCenterWidthPx / 2)
-    ////robotCenter.transform(transformCenter)
     var lwpos = robot.leftWheelPos ( )
-    //var lwrot = ['R', degrees]
-                     //,view.xFromMeters ( lwpos[0] - wheelWidth / 2),
-                      //view.yFromMeters ( lwpos[1] - wheelWidth / 2)]
     leftWheelRect.attr('transform', rotate)
     leftWheelRect.attr('x', view.xFromMeters ( lwpos[0] - wheelWidth / 2))
     leftWheelRect.attr('y', view.yFromMeters ( lwpos[1] - wheelWidth / 2))
@@ -268,18 +276,6 @@ function vectorAngleMag (angle, magnitude) {
     rightWheelRect.attr('transform', rotate)
     rightWheelRect.attr('x', view.xFromMeters ( rwpos[0] - wheelWidth / 2))
     rightWheelRect.attr('y', view.yFromMeters ( rwpos[1] - wheelWidth / 2))
-    //+ ['t', view.xFromMeters ( lwpos[0] ),
-                                                  //view.yFromMeters ( lwpos[1] )])
-    ////lwpos[0] -= wheelWidth / 4;
-    //lwpos[1] -= wheelWidth / 4;
-    //leftWheelRect.transform( lwrot + ['t', view.xFromMeters ( lwpos[0] ),
-                                  //view.yFromMeters ( lwpos[1] )])
-    //rwpos[1] += wheelWidth / 4;
-    //var rwrot = ['R', degrees,
-                      //view.xFromMeters ( rwpos[0] ),
-                      //view.yFromMeters ( rwpos[1] )]
-    //rightWheelRect.transform(rwrot + ['t', view.xFromMeters ( rwpos[0] ),
-                                           //view.yFromMeters ( rwpos[1] )])
     }
 
   function applyForces ( ) {
@@ -296,5 +292,6 @@ function vectorAngleMag (angle, magnitude) {
     world.DrawDebugData();
     world.ClearForces()
     }
+
   window.setInterval(update, 1000 / 60);
 })()
