@@ -13,20 +13,6 @@ function createRobotPhysics ( world, robot ) {
   var body = world.CreateBody(bodyDef)
   body.CreateFixture(fixDef)
 
-  //var fixDef2 = new Box2D.Dynamics.b2FixtureDef
-  //fixDef2.density = 0.1
-  //fixDef2.friction = 0.9
-  //fixDef2.restitution = 0.01
-  //fixDef2.shape = new Box2D.Collision.Shapes.b2PolygonShape
-  //fixDef2.shape.SetAsBox ( .01, .01 )
-
-  //var body2Def = new Box2D.Dynamics.b2BodyDef
-  //body2Def.type = Box2D.Dynamics.b2Body.b2_staticBody
-  //body2Def.position.x = 0
-  //body2Def.position.y = 0
-  //var body2 = world.CreateBody(bodyDef)
-  //body2.CreateFixture(fixDef2)
-
   var frictionDef = new Box2D.Dynamics.Joints.b2FrictionJointDef;
   frictionDef.bodyA = world.GetGroundBody ( )
   frictionDef.bodyB = body
@@ -35,36 +21,9 @@ function createRobotPhysics ( world, robot ) {
   frictionDef.maxTorque = 0.005
   var frictionJoint = world.CreateJoint(frictionDef)
   frictionJoint.m_linearMass = Box2D.Common.Math.b2Mat22.FromAngle ( robot.theta + Math.PI * 0.5)
-  //frictionDef.maxForce = 0.
-  //frictionJoint.m_linearMass.col1 = vectorOfArray([0, 100])
-  //frictionJoint.m_linearMass.col2 = vectorOfArray([0, 100])
-  //console.log(frictionJoint.m_linearMass.col1)
-  //console.log(frictionJoint.m_linearMass.col2)
-  //frictionJoint.m_linearMass = Box2D.Common.Math.b2Mat22.FromAngle ( robot.theta )
-  //var v = vectorOfArray([+0, -1])
-  //v.MulM(frictionJoint.m_linearMass)
-  //console.log(v)
-  //frictionJoint.m_linearMass.col1.Multiply(0)
-  //frictionJoint.m_linearMass.col2.Multiply(0)
-
   frictionDef.localAnchorB = vectorOfArray ( robot.rightWheelLocalPos ( ) )
   frictionJoint = world.CreateJoint(frictionDef)
   frictionJoint.m_linearMass = Box2D.Common.Math.b2Mat22.FromAngle ( robot.theta + Math.PI * 0.5 )
-  //frictionJoint.m_linearMass.col1 = vectorOfArray([0, 100])
-  //frictionJoint.m_linearMass.col2 = vectorOfArray([0, 100])
-  //frictionJoint.m_linearMass.col1.Multiply(0)
-  //frictionJoint.m_linearMass.col2.Multiply(0)
-
-  //console.log(frictionDef.bodyA)
-  //frictionDef.bd
-  //( body, body2, vectorOfArray ( robot.leftWheelPos ( ) ) )
-  //console.log(robot.leftWheelLocalPos ( ) )
-  //frictionDef.maxForce = 100
-  //frictionDef.maxTorque = 100
-
-  //frictionDef.localAnchorA = 
-  //frictionDef.Intialize ( body, null, vectorOfArray ( robot.leftWheelPos ( ) ) )
-  //var frictionJoint = world.CreateJoint(frictionDef)
   return body
   }
 
@@ -239,15 +198,19 @@ function vectorAngleMag (angle, magnitude) {
   world.CreateBody(bodyDef).CreateFixture(fixDef);
   bodyDef.position.Set(view.scalePixels(800), view.scalePixels(0));
   world.CreateBody(bodyDef).CreateFixture(fixDef);
-         
+
+  var drawDebug = false
   //setup debug draw
-  var debugDraw = new b2DebugDraw();
-  debugDraw.SetSprite(document.getElementById("canvas").getContext("2d"));
-  debugDraw.SetDrawScale(view.pixelsPerMeter);
-  debugDraw.SetFillAlpha(0.5);
-  debugDraw.SetLineThickness(1.0);
-  debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit);
-  world.SetDebugDraw(debugDraw);
+  var debugDraw
+  if (drawDebug) {
+    debugDraw = new b2DebugDraw();
+    debugDraw.SetSprite(document.getElementById("canvas").getContext("2d"));
+    debugDraw.SetDrawScale(view.pixelsPerMeter);
+    debugDraw.SetFillAlpha(0.5);
+    debugDraw.SetLineThickness(1.0);
+    debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit);
+    world.SetDebugDraw(debugDraw);
+    }
 
   var robotBody = createRobotPhysics ( world, robot )
 
@@ -289,7 +252,9 @@ function vectorAngleMag (angle, magnitude) {
     applyForces ( )
     world.Step(1 / 60, 10, 10)
     render ( )
-    world.DrawDebugData();
+    if (drawDebug) {
+      world.DrawDebugData();
+      }
     world.ClearForces()
     }
 
