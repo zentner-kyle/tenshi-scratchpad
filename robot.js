@@ -36,15 +36,14 @@ for (var i = 0; i <= maxAngle; i++) {
   robotImages[i].id = 'robot-image'
   }
 
-function updateRobotPosition () {
+var waitTime = 15
+function updateRobotPosition (deltaT) {
   var robot_div = document.getElementById('robot')
   robot_div.style.left = robot.x + 'px'
   robot_div.style.top  = robot.y + 'px'
   var degrees = (359 - Math.floor(degreesOf(robot.theta)))
   var robot_image = document.getElementById('robot-image')
   robot_div.replaceChild(robotImages[degrees], robot_image)
-  var waitTime = 15
-  drive(robot, waitTime)
-  window.setTimeout(updateRobotPosition, waitTime)
+  drive(robot, deltaT)
   }
-updateRobotPosition()
+window.setInterval(updateRobotPosition, waitTime, waitTime)
