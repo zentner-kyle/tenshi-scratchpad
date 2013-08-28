@@ -1,16 +1,28 @@
 body {
-  font-family: helvetica;
-  font-weight: bold;
+  font-family:helvetica;
+  font-weight:bold;
   }
 
 .big-box {
   border:4px solid;
   background-color:#cccccc;
   border-radius:10px;
-  box-shadow:inset 0 0 10px 10px #444;
   height:800px;
   width:800px;
+  position:relative;
   }
+
+.big-box::before {
+  content:'';
+  width:inherit;
+  height:inherit;
+  z-index:1;
+  position:absolute;
+
+  -webkit-box-shadow:inset 0px 0px 15px 7px #000;
+     -moz-box-shadow:inset 0px 0px 15px 7px #000;
+          box-shadow:inset 0px 0px 15px 7px #000;
+ }
 
 .center {
   margin-left:auto;
@@ -22,5 +34,11 @@ body {
   height:51px;
   background-color:black;
   position:absolute;
-  box-shadow: 0 0 3px 3px;
+  box-shadow:0 0 3px 3px;
+  }
+
+.maze {
+  position:absolute;
+  top:0;
+  left:0;
   }

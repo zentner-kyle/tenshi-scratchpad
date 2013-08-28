@@ -1,16 +1,21 @@
+var robotStart = {
+  x: 50.0,
+  y: 450.0
+  }
 
-var robot = {}
-robot.x = 50.0
-robot.y = 475.0
+var robotMidway = {
+  x: 400.0,
+  y: 260.0
+  }
 
-// Midway through the field
-//robot.x = 400.0
-//robot.y = 275.0
-
-robot.theta = 0.0
-robot.width = 10.0
-robot.lspeed = .1
-robot.rspeed = .1
+var robot = {
+  x: robotStart.x,
+  y: robotStart.y,
+  theta: 0.0,
+  width: 51.0,
+  lspeed: 0.1,
+  rspeed: 0.1
+  }
 
 function drive(robot, delta_t) {
   var ldiff = robot.lspeed * delta_t
@@ -90,13 +95,15 @@ function updateRobotPosition (deltaT) {
     return
     }
   var robot_div = document.getElementById('robot')
+  var field = document.getElementById('field')
   robot_div.style.left = robot.x + 'px'
   robot_div.style.top  = robot.y + 'px'
   var degrees = (359 - Math.floor(degreesOf(robot.theta)))
   var robot_image = document.getElementById('robot-image')
   robot_div.replaceChild(robotImages[degrees], robot_image)
   drive(robot, deltaT)
-  var state = collisionCheck.getStatus(robot.x, robot.y)
+  var state = collisionCheck.getStatus(robot.x + robot.width / 2,
+                                       robot.y + robot.width / 2)
   if (state == robotState.CRASHED) {
     alert('The robot has crashed.')
     done = true
@@ -106,4 +113,18 @@ function updateRobotPosition (deltaT) {
     done = true
     }
   }
+
+function restart ( ) {
+  robot.x = robotStart.x
+  robot.y = robotStart.y
+  done = false
+  }
+
+function midway ( ) {
+  robot.x = robotMidway.x
+  robot.y = robotMidway.y
+  done = false
+  }
+
 window.setInterval(updateRobotPosition, waitTime, waitTime)
+restart ()
