@@ -1,0 +1,6 @@
+[submodule "r.js"]
+	path = r.js
+	url = https://github.com/jrburke/r.js.git
+[submodule "xregexp"]
+	path = xregexp
+	url = https://github.com/slevithan/xregexp.git
