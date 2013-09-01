@@ -96,33 +96,54 @@ function (xregexp) {
         },
       parse: function () {
         var token;
+        var matcher;
         accum.push (make_special ('(start)', startState));
         while (true) {
           token = self.lexOnce ();
           if (token !== null) {
             if (token.type === 'pattern') {
-              while (token.more ()) {
-                var m = token.getMatcher ();
-                if (m.type === 'left') {
-                  while (token.lbp >= accum.rbp) {
-                    accum = accum.parent;
-                    }
-                  var a = accum.pop ();
-                  token.push (a);
+              matcher = token.getMatcher ();
+              while (matcher && matcher.type === 'left') {
+                while (token.lbp >= accum.rbp) {
+                  accum = accum.parent;
                   }
-                else if (m.type === 'right') {
-                  accum.push (token);
-                  accum = token;
-                  self.changeState (m.next_state);
-                  break;
-                  }
-                else {
-                  throw new Error ('Unsupported matcher type ' + m.type);
-                  }
+                token.push (accum.pop);
+                matcher = token.nextMatcher ();
                 }
+              if (matcher &&
+                  matcher.type === 'literal' &&
+                  matcher.text === token.text) {
+                matcher = token.nextMatcher ();
+                }
+              if (matcher && matcher.type === 'right') {
+                accum.push (token);
+                accum = token;
+                self.changeState (matcher.state);
+                }
+              //while (token.more ()) {
+                //var m = token.getMatcher ();
+                //if (m.type === 'left') {
+                  //while (token.lbp >= accum.rbp) {
+                    //accum = accum.parent;
+                    //}
+                  //var a = accum.pop ();
+                  //token.push (a);
+                  //}
+                //else if (m.type === 'right') {
+                  //accum.push (token);
+                  //accum = token;
+                  //self.changeState (m.state);
+                  //break;
+                  //}
+                //else {
+                  //throw new Error ('Unsupported matcher type ' + m.type);
+                  //}
+                //}
               }
             else {
               accum.push (token);
+              console.log (accum)
+              //self.changeState (accum.getMatcher ().state);
               self.changeState (token.state);
               if (!accum.more ()) {
                 accum = accum.parent;
@@ -189,6 +210,10 @@ function (xregexp) {
       getMatcher: function () {
         return self.matchers[self.idx];
         },
+      nextMatcher: function () {
+        self.advance ();
+        return self.getMatcher ();
+        },
       advance: function () {
         self.idx += 1;
         },
@@ -239,11 +264,11 @@ function (xregexp) {
     return self;
     };
 
-  function make_right (rbp, next_state, arity) {
+  function make_right (rbp, state, arity) {
     var self = {
       type: 'right',
       arity: arity || 'single',
-      next_state: next_state,
+      state: state,
       post: function (parser) {
         var out = [];
         var m;
