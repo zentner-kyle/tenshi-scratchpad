@@ -6,76 +6,123 @@ requirejs.config({
 
 requirejs(['./xregexp/xregexp-all.js'],
 function (xregexp) {
-  function match_all (text, regex, callback) {
-    xregexp.forEach(text, regex, callback);
-    }
-  var parser_state = {
-    prefix: 1,
-    infix:  2,
-    line_start: 3,
-    };
 
-  function token (type, text) {
-    return {
-      type: type,
-      text: text,
+  var lex = function () {
+    var token_reg = xregexp( 
+        ' (?<space>       \\p{Whitespace}+)                   |' +
+        ' (?<number>      [0-9]+)                             |' +
+        ' (?<identifier>  [\\p{Letter}_] [\\p{Letter}_0-9]*)  |' +
+        ' (?<operator>    [^\\p{Letter}_0-9\\p{Whitespace}]+)  '
+        , 'x' );
+    return function (text) {
+      return xregexp.exec(text, token_reg);
       }
-    }
+    } ()
 
-  function operator (type, text, lbp, rbp, starts_indent) {
-    return {
-      type: type,
-      text: text,
-      lbp: lbp,
-      rbp: rbp,
-      starts_indent: starts_indent,
+  function getType (match) {
+    var types = ['space', 'number', 'identifier', 'operator'];
+    for (var t in types) {
+      if (match[types[t]] !== undefined) {
+        return types[t];
+        }
       }
+    throw new Error('Could not determine type of match "' + match[0] + '"');
     }
 
-  function state (name) {
-    return {
+  function make_parser (states, startState) {
+    var text = "";
+    var idx  = 0;
+    var state = startState || "start";
+    var tokenTable = {};
+    var theStates = {};
+    for (var i in states) {
+      theStates[states[i].name] = states[i];
+      }
+    var self = {
+      getState: function () {
+        return theStates[state];
+        },
+      changeState: function (stateName) {
+        state = theStates[stateName];
+        },
+      lexOnce: function () {
+        var match = self.getState().lex (text.substr(idx));
+        var type = getType(match);
+        var tokenText = match[0];
+        idx += tokenText.length;
+        match = self.getState ().getToken (type, tokenText);
+        if (match === undefined) {
+          match = tokenTable[match];
+          }
+        if (match === undefined) {
+          match = make_atom(tokenText, type);
+          }
+        return match;
+        },
+      start: function (some_text) {
+        text = some_text;
+        idx = 0;
+        },
+      };
+    return self;
+    }
+
+  function make_state (name) {
+    var self = {
       table: {},
       name: name || "anonymous state",
       onMissing: function (toFind) {throw new Error("Could not find " + toFind);},
-      }
+      lex: lex,
+      getToken: function (type, text) { 
+        if (type === 'space') {
+          return null;
+          }
+        return self.table[text];
+        }
+      };
+    return self;
     }
 
-  function pattern (matchers) {
+  function make_pattern (matchers) {
     return {
       matchers: matchers || [],
       post: function (parser) {}
-      }
+      };
     }
 
-  function unary_match (token) {
+  function make_unary_match (token) {
     return {
       type: 'literal',
       arity: 'single',
       post: function (parser) {},
       token: token,
-      }
+      };
     }
 
-  function left (lbp) {
+  function make_left (lbp) {
     return {
       type: 'left',
       arity: 'single',
       post: function (parser) {},
       power: lbp,
-      }
+      };
     }
 
-  function right (rbp, arity) {
+  function make_right (rbp, arity) {
     return {
-      type: 'left',
+      type: 'right',
       arity: arity | 'single',
       post: function (parser) {},
       power: rbp,
-      }
+      };
     }
 
-  function InvalidSyntax (message) {
-    this.message = message;
+  function make_atom (text, type) {
+    return {
+      type: 'atom',
+      subtype: type,
+      text: text,
+      }
     }
 
   function fill_operator_table (table) {
@@ -168,29 +215,6 @@ function (xregexp) {
       }
     }
 
-  function select_op (parser, text) {
-    if (parser.state === parser_state.infix) {
-      var ops = parser.table[text];
-      for (var i in ops) {
-        if (ops[i].type === 'infix') {
-          return ops[i];
-          }
-        }
-      //throw text + ' appears in infix context, but is not an infix operator.';
-      return ops[0];
-      }
-    else {
-      var ops = parser.table[text];
-      for (var i in ops) {
-        if (ops[i].type === 'prefix') {
-          return ops[i];
-          }
-        }
-      //throw text + ' appears in prefix context, but is not a prefix operator.';
-      return ops[0];
-      }
-    }
-
   function process_match (match, parser, callback) {
     if (match.space) {
       callback(token('space', match.space));
@@ -202,7 +226,7 @@ function (xregexp) {
       if (!(match.identifier in parser.table)) {
         parser.table[match.identifier] = token('identifier', match.identifier);
         }
-      return parser.table[match.identifier]
+      return parser.table[match.identifier];
       }
     else if (match.operator) {
       var ops = split_op(match.operator, parser.table);
@@ -228,38 +252,16 @@ function (xregexp) {
       }
     }
 
-  function new_operator_table () {
-    var table = {};
-    fill_operator_table(table);
-    return table;
-    }
-
-  function parse (text) {
-    var table = new_operator_table ();
-    }
-
-  function Parser (text) {
-    this.state = parser_state.line_start;
-    this.table = new_operator_table ();
-    this.idx = 0;
-    this.text;
-    }
-
-  function lex (text, parser, callback) {
-    var token_reg = xregexp( 
-        ' (?<space>       \\p{Whitespace}+)                   |' +
-        ' (?<number>      [0-9]+)                             |' +
-        ' (?<identifier>  [\\p{Letter}_] [\\p{Letter}_0-9]*)  |' +
-        ' (?<operator>    [^\\p{Letter}_0-9\\p{Whitespace}]+)  '
-        , 'x' );
-    match_all (text, token_reg, function (match) {
-      process_match (match, parser, callback);
-      });
-    }
 
   function main () {
-    var test_text = ' test =--test - 40';
-    lex (test_text, new Parser(), console.log);
+    var infix_state = make_state('infix');
+    var parser = make_parser ([infix_state], 'infix');
+    parser.start("a + 1");
+    console.log(parser.lexOnce());
+    console.log(parser.lexOnce());
+    console.log(parser.lexOnce());
+    console.log(parser.lexOnce());
+    console.log(parser.lexOnce());
     };
   main ();
   });
