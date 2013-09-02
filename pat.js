@@ -37,6 +37,14 @@ function (xregexp) {
     return out;
     };
 
+  function obj_or(obja, objb) {
+    var k;
+    for (k in objb) {
+      obja[k] = objb[k];
+      }
+    return obja;
+    }
+
   var ast = {
       rules: [],
       push: function (arg) {
@@ -63,14 +71,6 @@ function (xregexp) {
           }
         }
       };
-
-  function obj_or(obja, objb) {
-    var k;
-    for (k in objb) {
-      obja[k] = objb[k];
-      }
-    return obja;
-    }
 
   var state = {
     textTable: {},

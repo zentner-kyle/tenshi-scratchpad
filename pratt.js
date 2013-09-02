@@ -29,6 +29,7 @@ function (xregexp) {
     };
 
   var expression = function (rbp) {
+    var left;
     };
 
 
