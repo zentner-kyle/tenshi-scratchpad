@@ -29,6 +29,57 @@ function (xregexp) {
       }
     } ();
 
+  function string_map (obj) {
+    obj = obj || {};
+    return {
+      get: function (key) {
+        return obj[key + '$'];
+        },
+      set: function (key, val) {
+        obj[key + '$'] = val;
+        },
+      has: function (key) {
+        return key + '$' in obj;
+        },
+      'delete': function (key) {
+        return delete obj[key + '$'];
+        }
+      };
+    };
+
+  function scope (previousScope) {
+    textTable = string_map ();
+    typeTable = string_map ();
+    return {
+      getText: function (key) {
+        return textTable.get(key);
+        },
+      getType: function (key) {
+        return typeTable.get(key);
+        },
+      setText: function (key, val) {
+        textTable.set(key, val);
+        return this;
+        },
+      setType: function (key, val) {
+        typeTable.set(key, val);
+        return this;
+        },
+      loadText: function (table) {
+        var key;
+        for (key in table) {
+          this.setText(key, table[key]);
+          }
+        },
+      loadType: function (table) {
+        var key;
+        for (key in table) {
+          this.setType(key, table[key]);
+          }
+        },
+      };
+    };
+
   var lexAll = function (text) {
     var idx = 0;
     var out = [];
