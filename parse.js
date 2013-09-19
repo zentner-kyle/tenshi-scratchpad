@@ -1,12 +1,7 @@
-var requirejs = require ('./r.js/r.js');
 var util = require('util');
+var xregexp = require('./xregexp/xregexp-all.js');
 
-requirejs.config ({
-  nodeRequire: require
-  });
-
-requirejs (['./xregexp/xregexp-all.js'],
-function (xregexp) {
+var main = function (xregexp) {
 
   var lex = function () {
     var token_reg = xregexp ( 
@@ -308,4 +303,5 @@ function (xregexp) {
     }
 
   console.log (util.inspect(parse_expr ('++apple + 1 - - bad'), { colors: true, depth: 100 }));
-  });
+  };
+main (xregexp);
