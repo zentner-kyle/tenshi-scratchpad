@@ -6,7 +6,8 @@ var main = function ( ) {
     'noop': 0,
     'add': 1,
     'li': 2,
-    'print': 3
+    'print': 3,
+    'end': 4
     };
 
   function make_bunch ( a, b, c, d ) {
@@ -26,10 +27,12 @@ var main = function ( ) {
     }
 
   var code = [
-    make_bunch ( ops.li, ops.li, ops.add ),
+    make_bunch ( ops.li, ops.li, ops.li, ops.add ),
     5,
     6,
-    make_bunch ( ops.print ),
+    -2,
+    make_bunch ( ops.add, ops.print ),
+    make_bunch ( ops.end )
     ];
 
   var op_args = [ 0, 0, 0, 0 ];
@@ -42,7 +45,10 @@ var main = function ( ) {
     }
 
   var op_table = [
-    function noop ( state ) {},
+    function noop ( state ) {
+      state.bunch = state.func[state.get_pc ( ) ];
+      state.move_pc ( 1 );
+      },
     function add ( state ) {
       state.push ( state.pop ( ) + state.pop ( ) );
       },
@@ -54,15 +60,19 @@ var main = function ( ) {
       for ( var i = 0; i < state.stack_top; i++ ) {
         console.log ( state.stack[i] );
         }
+      },
+    function end ( state ) {
+      state.run = false;
       }
     ];
 
   function make_vm ( func ) {
-    var pc = 0;
     return {
       func: func,
       stack_top: 0,
       frame: 0,
+      _pc: 0,
+      run: true,
       stack: [],
       bunch: [0, 0, 0, 0],
       push: function ( val ) {
@@ -70,10 +80,10 @@ var main = function ( ) {
         this.stack_top += 1;
         },
       get_pc: function ( ) {
-        return pc;
+        return this._pc;
         },
       move_pc: function ( amount ) {
-        pc += amount;
+        this._pc += amount;
         },
       pop: function ( ) {
         this.stack_top -= 1;
@@ -81,19 +91,13 @@ var main = function ( ) {
         return out;
         },
       run: function ( ) {
-        while ( true ) {
-          if ( this.bunch[0] === 0 ) {
-            this.bunch = this.func[pc++];
-            }
-          if ( this.bunch === undefined ) {
-            return 0;
-            }
+        while ( this.run ) {
           var op = this.bunch[0];
-          op_table[op] ( this );
           shift_bunch ( this.bunch, 1 + op_args[op] );
+          op_table[op] ( this );
           }
         }
-      }
+      };
     }
 
     var vm = make_vm ( code );
