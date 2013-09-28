@@ -1,0 +1,125 @@
+main:
+  load core package
+  setup connection with host
+  get initial package
+  apply initial package
+  setup stacks
+  setup registers
+  loop
+    run bytecode
+    if package available, attempt to apply package
+    if at end of bytecode, sleep
+
+run bytecode:
+  loop
+    if past end of byte code, return
+    if at safe point and patch available, return
+    perform arithmetic operations
+    perform comparisons
+    perform jumps
+    perform function calls
+
+function call:
+  check if space on call stack
+  if not, add new bucket to call stack
+  push registers onto call stack
+  check that there's enough space in current stack bucket
+  if not, add a new bucket to the stack
+  update registers to new stack locations
+  set pc to start of function
+
+setup stacks:
+  allocate main stack to max ( stack default size, main minimum stack size )
+  allocate call stack
+
+setup registers:
+  store main stack, call stack
+  return address = 0
+  frame = main stack[0]
+
+apply package:
+  check magic bytes and version number
+  if error, respond to host and return
+  apply fixups to package
+  for type in object types
+    check patch table of type
+    apply patch table of type
+
+check patch table:
+  for each patch:
+    perform type specific check
+    if any check fails, return error
+
+check function:
+  if patch type == update:
+    check that there is no program counter on the call stack which collides with patch data
+  if patch type == watch or value or safe:
+    check that index is reasonable?
+
+check mutable of immutable:
+  check that size doesn't increase?
+
+apply patch table:
+  for each patch
+    check if id found in object table
+    if not found, construct a new one
+    check if enough space in chunk
+    if not enough space, reallocate with enough space
+    move data that should not be overwritten
+    paste in patch data
+    if type == function, update the call stack
+
+apply fixup:
+  look up object location in object table
+  write result into package at offset
+
+on data receive:
+  append data to current package
+
+
+package format:
+
+  header:
+    magic bytes
+    version number
+    offset of fixup table
+    array of object types => location of patch table in package
+
+  patch table:
+    number of patches
+    packed patches
+
+  fixup table:
+    total size of fixups in bytes
+    array of fixups
+
+  fixup:
+    object type
+    object id
+    offset into package to overwrite with id
+
+  patch:
+    size in bytes of patch
+    patch type
+    object id
+    bytecode to run
+    offset into object to patch
+    number of bytes to overwrite
+    packed bytes to write
+
+object types:
+  mutables
+    array
+    robot
+    controller
+    joystick?
+  
+  immutables
+    function
+    string
+    integer
+    float
+    tuple
+
+string data should relocatable
+bytecode (stored in functions) should be relocatable
