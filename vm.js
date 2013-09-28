@@ -2,13 +2,61 @@ var util = require ( 'util' );
 
 var main = function ( ) {
 
-  var ops = {
-    'noop': 0,
-    'add': 1,
-    'li': 2,
-    'print': 3,
-    'end': 4
+  function make_optables ( ops ) {
+    var out = {
+      op: {},
+      code: {},
+      name: [],
+      argc: [],
+      func: [],
+      };
+    for ( var i in ops ) {
+      out.op[ops[i].name] = ops[i];
+      out.code[ops[i].name] = ops[i].code;
+      out.argc[ops[i].code] = ops[i].argc;
+      out.func[ops[i].code] = ops[i].func;
+      out.name[ops[i].code] = ops[i].name;
+      }
+    return out;
     };
+
+  function make_opcode ( code, name, argc, func ) {
+    return {
+      code: code,
+      name: name,
+      argc: argc,
+      func: func,
+      };
+    };
+
+  var opcodes = [
+    make_opcode ( 0, 'noop', 0,
+    function noop ( state ) {
+      state.bunch = state.func[state.get_pc ( ) ].slice ( 0 );
+      state.move_pc ( 1 );
+      }),
+    make_opcode ( 1, 'add', 1,
+    function add ( state ) {
+      state.push ( state.pop ( ) + state.pop ( ) );
+      }),
+    make_opcode ( 2, 'li', 1,
+    function li ( state ) {
+      state.push ( state.func[ state.get_pc ( ) ] );
+      state.move_pc ( 1 );
+      }),
+    make_opcode ( 3, 'print', 1,
+    function print ( state ) {
+      for ( var i = 0; i < state.stack_top; i++ ) {
+        console.log ( state.stack[i] );
+        }
+      }),
+    make_opcode ( 4, 'end', 1,
+    function end ( state ) {
+      state.run = false;
+      }),
+    ];
+
+  var tables = make_optables ( opcodes );
 
   function make_bunch ( a, b, c, d ) {
     if ( a === undefined ) {
@@ -26,6 +74,7 @@ var main = function ( ) {
     return [a, b, c, d];
     }
 
+  var ops = tables.code;
   var code = [
     make_bunch ( ops.li, ops.li, ops.li, ops.add ),
     5,
@@ -35,36 +84,12 @@ var main = function ( ) {
     make_bunch ( ops.end )
     ];
 
-  var op_args = [ 0, 0, 0, 0 ];
-
   function shift_bunch ( bunch, amount ) {
     for ( var i = 0; i < amount; i++ ) {
       var removed = bunch.shift ();
       bunch[3] = 0;
       }
     }
-
-  var op_table = [
-    function noop ( state ) {
-      state.bunch = state.func[state.get_pc ( ) ];
-      state.move_pc ( 1 );
-      },
-    function add ( state ) {
-      state.push ( state.pop ( ) + state.pop ( ) );
-      },
-    function li ( state ) {
-      state.push ( state.func[ state.get_pc ( ) ] );
-      state.move_pc ( 1 );
-      },
-    function print ( state ) {
-      for ( var i = 0; i < state.stack_top; i++ ) {
-        console.log ( state.stack[i] );
-        }
-      },
-    function end ( state ) {
-      state.run = false;
-      }
-    ];
 
   function make_vm ( func ) {
     return {
@@ -93,14 +118,16 @@ var main = function ( ) {
       run: function ( ) {
         while ( this.run ) {
           var op = this.bunch[0];
-          shift_bunch ( this.bunch, 1 + op_args[op] );
-          op_table[op] ( this );
+          /// Uncomment this line for debugging
+          // console.log ( this );
+          tables.func[op] ( this );
+          shift_bunch ( this.bunch, tables.argc[op] );
           }
         }
       };
     }
 
-    var vm = make_vm ( code );
-    vm.run ( );
+  var vm = make_vm ( code );
+  vm.run ( );
   };
 main ( );
