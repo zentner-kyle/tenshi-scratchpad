@@ -5,6 +5,7 @@ var main = function ( ) {
   function make_optables ( ops ) {
     var out = {
       op: {},
+      code_to_obj: [],
       code: {},
       name: [],
       argc: [],
@@ -12,6 +13,7 @@ var main = function ( ) {
       };
     for ( var i in ops ) {
       out.op[ops[i].name] = ops[i];
+      out.code_to_obj[ops[i].code] = ops[i];
       out.code[ops[i].name] = ops[i].code;
       out.argc[ops[i].code] = ops[i].argc;
       out.func[ops[i].code] = ops[i].func;
@@ -20,74 +22,86 @@ var main = function ( ) {
     return out;
     };
 
-  function make_opcode ( code, name, argc, func ) {
+  function make_opcode ( code, name, argc, stack, func ) {
     return {
       code: code,
       name: name,
       argc: argc,
+      stack: stack,
       func: func,
       };
     };
 
   var opcodes = [
-    make_opcode ( 0, 'noop', 0,
+    make_opcode ( 0, 'noop', 0, 0,
     function noop ( state ) {
       state.check_bunch ( state.func[state.get_pc ( )] );
+      var pc = state.get_pc ( );
+      var func = state.func;
+      console.log ( func );
+      console.log ( 'pc = ' + pc );
+      console.log ( state.func[pc - 1] );
+      console.log ( state.func[pc] );
+      console.log ( state.func[pc + 1] );
       state.bunch = state.func[state.get_pc ( ) ].slice ( 0 );
       state.move_pc ( 1 );
       }),
-    make_opcode ( 1, 'add', 1,
+    make_opcode ( 1, 'add', 1, -1,
     function add ( state ) {
       state.push ( state.pop ( ) + state.pop ( ) );
       }),
-    make_opcode ( 2, 'li', 1,
+    make_opcode ( 2, 'li', 1, 1,
     function li ( state ) {
       state.push ( state.func[ state.get_pc ( ) ] );
       state.move_pc ( 1 );
       }),
-    make_opcode ( 3, 'print', 1,
+    make_opcode ( 3, 'print', 1, 0,
     function print ( state ) {
       for ( var i = 0; i < state.stack_top; i++ ) {
         console.log ( state.stack[i] );
         }
       }),
-    make_opcode ( 4, 'end', 1,
+    make_opcode ( 4, 'end', 1, 0,
     function end ( state ) {
       state.run = false;
       }),
-    make_opcode ( 5, 'mult', 1,
+    make_opcode ( 5, 'mult', 1, -1,
     function add ( state ) {
       state.push ( state.pop ( ) * state.pop ( ) );
       }),
-    make_opcode ( 6, 'div', 1,
+    make_opcode ( 6, 'div', 1, -1,
     function add ( state ) {
       state.push ( state.pop ( ) / state.pop ( ) );
       }),
-    make_opcode ( 7, 'bn1', 2,
+    make_opcode ( 7, 'bn1', 2, -1,
     function bn1 ( state ) {
       if ( ! state.pop ( ) ) {
         state.move_pc ( state.get_arg ( 1 ) );
         }
       }),
-    make_opcode ( 8, 'eq', 1,
+    make_opcode ( 8, 'eq', 1, -1,
     function eq ( state ) {
       state.push ( state.pop ( ) === state.pop ( ) );
       }),
-    make_opcode ( 9, 'dup', 2,
+    make_opcode ( 9, 'dup', 2, 1,
       function dup ( state ) {
       state.push ( state.get_stack ( state.get_arg ( 1 ) ) );
       }),
-    make_opcode ( 10, 'set', 2,
+    make_opcode ( 10, 'set', 2, -1,
       function set ( state ) {
       state.set_stack ( state.get_arg ( 1 ), state.pop ( ) );
       }),
-    make_opcode ( 11, 'not', 1,
+    make_opcode ( 11, 'not', 1, 0,
     function not ( state ) {
       state.push ( ! state.pop ( ) );
       }),
-    make_opcode ( 12, 'j1', 2,
+    make_opcode ( 12, 'j1', 2, 0,
     function j1 ( state ) {
       state.move_pc ( state.get_arg ( 1 ) );
+      }),
+    make_opcode ( 13, 'pop', 1, -1,
+    function pop ( state ) {
+      state.pop ( );
       }),
     ];
 
@@ -122,20 +136,29 @@ var main = function ( ) {
     tempc: 0,
     vars: [],
     emit: function ( a, b, c, d ) {
-      this.code.push ( make_bunch ( a, b, c, d ) );
+      this.emit_bunch ( make_bunch ( a, b, c, d ) );
       },
     emit_bunch: function ( bunch ) {
       this.code.push ( bunch );
       },
+    add_temp: function ( count ) {
+      console.log ( 'adding ' + count );
+      this.tempc += count;
+      },
     has_var: function has_var ( name ) {
-      return this.vars.indexOf ( name ) !== -1;
+      return this.vars.lastIndexOf ( name ) !== -1;
       },
     var_idx: function var_idx ( name ) {
-      var index = this.vars.indexOf( name );
-      return this.tempc + this.vars.length - index - 1;
+      var index = this.vars.lastIndexOf( name );
+      var out = this.vars.length - index - 1 + this.tempc;
+      //var out = this.tempc + this.vars.length - index - 1;
+      console.log ( 'var ' + name + ' is at index ' + out );
+      console.log ( 'this.tempc = ' + this.tempc );
+      console.log ( 'vars ' + this.vars );
+      return out;
       },
     add_var: function add_var ( name ) {
-      assert ( this.tempc === 0, "There variables should not be above temporaries." );
+      assert ( this.tempc === 1, "There should be precisely one temporary when a variable is added." );
       this.vars.push ( name );
       },
     get_pc: function get_pc ( ) {
@@ -148,23 +171,50 @@ var main = function ( ) {
     reserve_bunch: function ( ) {
       this.code.push ( 'reserved' );
       return this.get_pc ( );
-      }
+      },
+    get_scope_snapshot: function ( ) {
+      assert ( this.tempc === 0, "There should be no temporary values at a scope snapshot." );
+      return this.vars.slice ( 0 );
+      },
+    apply_scope_snapshot: function ( snapshot ) {
+      assert ( this.tempc === 0, "There should be no temporary values at a scope snapshot." );
+      assert ( snapshot.length <= this.vars.length, "Applied snapshot should have at most same number of vars." );
+      var extra_now = false;
+      for ( var i in this.vars ) {
+        if ( ! extra_now && snapshot[i] === undefined ) {
+          extra_now = true;
+          }
+        if ( ! extra_now ) {
+          assert ( snapshot[i] === this.vars[i], "Snapshot should have same prefix as current scope." );
+          }
+        else {
+          assert ( snapshot[i] === undefined, "There should be no more vars after the current scope ends." );
+          console.log ( 'emitting pop' );
+          this.emit ( ops.pop );
+          }
+        }
+      this.vars = snapshot;
+      },
     };
 
   function compile_assignment ( cgen ) {
      if ( cgen.has_var ( this.left.text ) ) {
        this.right.compile ( cgen );
-       cgen.emit ( ops.set, cgen.var_idx ( this.left ) );
+       cgen.emit ( ops.set, cgen.var_idx ( this.left.text ) );
+       cgen.add_temp ( -1 );
        }
      else {
-       cgen.add_var ( this.left.text );
+       assert ( cgen.tempc === 0, "There should be no temporaries when a variable is created." );
        this.right.compile ( cgen );
+       cgen.add_var ( this.left.text );
+       cgen.add_temp ( -1 );
        }
     }
 
   function compile_number ( cgen ) {
       cgen.emit ( ops.li );
       cgen.emit_bunch ( parseInt ( this.text ) )
+      cgen.add_temp ( 1 );
     }
 
   function compile_block ( cgen ) {
@@ -194,6 +244,7 @@ var main = function ( ) {
     text: name,
       compile: function compile_var ( cgen ) {
         cgen.emit ( ops.dup, cgen.var_idx ( this.text ) );
+        cgen.add_temp ( 1 );
         }
       }
     }
@@ -202,19 +253,38 @@ var main = function ( ) {
     this.left.compile ( cgen );
     this.right.compile ( cgen );
     cgen.emit ( ops.eq, ops.not );
+    cgen.add_temp ( -1 );
     }
 
   function compile_while ( cgen ) {
     var start = cgen.get_pc ( );
     this.condition.compile ( cgen );
     var branch = cgen.reserve_bunch ( );
-    // TODO: block scoping of variables
+    cgen.add_temp ( -1 );
+    var scope_snapshot = cgen.get_scope_snapshot ( );
     for ( var c in this.children ) {
+      console.log ( 'compiling ', this.children[c] );
       this.children[c].compile ( cgen );
       }
-    cgen.emit ( ops.j1, start - cgen.get_pc ( ) );
+    cgen.apply_scope_snapshot ( scope_snapshot );
+    cgen.emit ( ops.j1, start - cgen.get_pc ( ) - 1 );
     cgen.emit ( ops.noop );
     cgen.set ( branch, make_bunch ( ops.bn1, cgen.get_pc ( ) - branch ) );
+    }
+
+  function compile_add ( cgen ) {
+    this.left.compile ( cgen );
+    this.right.compile ( cgen );
+    cgen.emit ( ops.add );
+    cgen.add_temp ( -1 );
+    }
+
+  function make_add ( left, right ) {
+    return {
+    left: left,
+    right: right,
+    compile: compile_add
+      };
     }
 
   var ast = {
@@ -227,13 +297,23 @@ var main = function ( ) {
       { type: 'while',
         condition: {
             text: '!=',
-              left: make_var ( 'a' ),
+              left: make_var ( 'n' ),
               right: make_number ( 0 ),
               compile: compile_not_equal
           },
         children: [
+          make_assignment ( make_var ( 'temp' ), make_add ( make_var ( 'a' ), make_var ( 'b' ) ) ),
+          make_assignment ( make_var ( 'a' ), make_var ( 'b' ) ),
+          make_assignment ( make_var ( 'b' ), make_var ( 'temp' ) ),
+          make_assignment ( make_var ( 'n' ), make_add ( make_var ( 'n' ), make_number ( -1 ) ) ),
           ],
           compile: compile_while
+        },
+      {
+      type: 'end',
+      compile: function compile_end ( cgen ) {
+        cgen.emit ( ops.end );
+        }
         }
      ]};
 
@@ -364,8 +444,11 @@ var main = function ( ) {
           }
         },
       debug_print: function ( ) {
-        console.log ( this.stack );
         var op = this.bunch[0];
+        if ( op === 0 ) {
+          return;
+          }
+        console.log ( this.stack );
         var args = ' ';
         for ( var i = 1; i < tables.argc[op]; i++) {
           args += this.get_arg ( i ) + ' ';
@@ -387,6 +470,10 @@ var main = function ( ) {
 
   var vm = make_vm ( code );
   vm.debug = false;
+  vm.run ( );
+
+  vm = make_vm ( cgen.code );
+  vm.debug = true;
   vm.run ( );
   };
 main ( );
