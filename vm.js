@@ -111,6 +111,135 @@ var main = function ( ) {
 
   var ops = tables.code;
 
+  function assert ( thing, reason ) {
+    if ( ! thing ) {
+      console.log ( 'ERROR: ' + reason );
+      }
+    }
+
+  var cgen = {
+    code: [],
+    tempc: 0,
+    vars: [],
+    emit: function ( a, b, c, d ) {
+      this.code.push ( make_bunch ( a, b, c, d ) );
+      },
+    emit_bunch: function ( bunch ) {
+      this.code.push ( bunch );
+      },
+    has_var: function has_var ( name ) {
+      return this.vars.indexOf ( name ) !== -1;
+      },
+    var_idx: function var_idx ( name ) {
+      var index = this.vars.indexOf( name );
+      return this.tempc + this.vars.length - index - 1;
+      },
+    add_var: function add_var ( name ) {
+      assert ( this.tempc === 0, "There variables should not be above temporaries." );
+      this.vars.push ( name );
+      },
+    get_pc: function get_pc ( ) {
+      return this.code.length - 1;
+      },
+    set: function set ( idx, val ) {
+      assert ( this.code[idx] === 'reserved', 'Only reserved code should be overwritten' );
+      this.code[idx] = val;
+      },
+    reserve_bunch: function ( ) {
+      this.code.push ( 'reserved' );
+      return this.get_pc ( );
+      }
+    };
+
+  function compile_assignment ( cgen ) {
+     if ( cgen.has_var ( this.left.text ) ) {
+       this.right.compile ( cgen );
+       cgen.emit ( ops.set, cgen.var_idx ( this.left ) );
+       }
+     else {
+       cgen.add_var ( this.left.text );
+       this.right.compile ( cgen );
+       }
+    }
+
+  function compile_number ( cgen ) {
+      cgen.emit ( ops.li );
+      cgen.emit_bunch ( parseInt ( this.text ) )
+    }
+
+  function compile_block ( cgen ) {
+    for ( var c in this.children ) {
+      this.children[c].compile ( cgen )
+      }
+    }
+
+  function make_assignment ( name, val ) {
+    return {
+    text: '=',
+    left: name,
+    right: val,
+    compile: compile_assignment
+      };
+    }
+
+  function make_number ( val ) {
+    return {
+    text: val,
+    compile: compile_number
+      }
+    }
+
+  function make_var ( name ) {
+    return {
+    text: name,
+      compile: function compile_var ( cgen ) {
+        cgen.emit ( ops.dup, cgen.var_idx ( this.text ) );
+        }
+      }
+    }
+
+  function compile_not_equal ( cgen ) {
+    this.left.compile ( cgen );
+    this.right.compile ( cgen );
+    cgen.emit ( ops.eq, ops.not );
+    }
+
+  function compile_while ( cgen ) {
+    var start = cgen.get_pc ( );
+    this.condition.compile ( cgen );
+    var branch = cgen.reserve_bunch ( );
+    // TODO: block scoping of variables
+    for ( var c in this.children ) {
+      this.children[c].compile ( cgen );
+      }
+    cgen.emit ( ops.j1, start - cgen.get_pc ( ) );
+    cgen.emit ( ops.noop );
+    cgen.set ( branch, make_bunch ( ops.bn1, cgen.get_pc ( ) - branch ) );
+    }
+
+  var ast = {
+    type: 'block',
+    compile: compile_block,
+    children: [
+      make_assignment ( make_var ( 'n' ), make_number ( 100 ) ),
+      make_assignment ( make_var ( 'a' ), make_number ( 1 ) ),
+      make_assignment ( make_var ( 'b' ), make_number ( 1 ) ),
+      { type: 'while',
+        condition: {
+            text: '!=',
+              left: make_var ( 'a' ),
+              right: make_number ( 0 ),
+              compile: compile_not_equal
+          },
+        children: [
+          ],
+          compile: compile_while
+        }
+     ]};
+
+  ast.compile ( cgen );
+  console.log ( cgen.code );
+
   // Calculate fib(102)
 
   /*
@@ -121,7 +250,7 @@ var main = function ( ) {
    *  temp = a + b
    *  a = b
    *  b = temp
-   *  n -= 1
+   *  n = n - 1
    *
    * li 100
    * # [100]
@@ -176,14 +305,14 @@ var main = function ( ) {
     make_bunch ( ops.dup, 2, ops.li ),
     0,
     make_bunch ( ops.eq, ops.not, ops.bn1, 7 ),
-    make_bunch ( ops.dup, 1, ops.dup, 1),
+    make_bunch ( ops.dup, 1, ops.dup, 1 ),
     make_bunch ( ops.add, ops.dup, 1 ),
     make_bunch ( ops.set, 3, ops.set, 1 ),
     make_bunch ( ops.dup, 2, ops.li ),
     -1,
     make_bunch ( ops.add, ops.set, 3 ),
     make_bunch ( ops.j1, -10 ),
-    make_bunch ( ops.set, 1, ops.set, 1),
+    make_bunch ( ops.set, 1, ops.set, 1 ),
     make_bunch ( ops.print, ops.end )
     ];
 
