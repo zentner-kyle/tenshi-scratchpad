@@ -36,13 +36,6 @@ var main = function ( ) {
     make_opcode ( 0, 'noop', 0, 0,
     function noop ( state ) {
       state.check_bunch ( state.func[state.get_pc ( )] );
-      var pc = state.get_pc ( );
-      var func = state.func;
-      console.log ( func );
-      console.log ( 'pc = ' + pc );
-      console.log ( state.func[pc - 1] );
-      console.log ( state.func[pc] );
-      console.log ( state.func[pc + 1] );
       state.bunch = state.func[state.get_pc ( ) ].slice ( 0 );
       state.move_pc ( 1 );
       }),
@@ -142,7 +135,6 @@ var main = function ( ) {
       this.code.push ( bunch );
       },
     add_temp: function ( count ) {
-      console.log ( 'adding ' + count );
       this.tempc += count;
       },
     has_var: function has_var ( name ) {
@@ -151,10 +143,6 @@ var main = function ( ) {
     var_idx: function var_idx ( name ) {
       var index = this.vars.lastIndexOf( name );
       var out = this.vars.length - index - 1 + this.tempc;
-      //var out = this.tempc + this.vars.length - index - 1;
-      console.log ( 'var ' + name + ' is at index ' + out );
-      console.log ( 'this.tempc = ' + this.tempc );
-      console.log ( 'vars ' + this.vars );
       return out;
       },
     add_var: function add_var ( name ) {
@@ -189,7 +177,6 @@ var main = function ( ) {
           }
         else {
           assert ( snapshot[i] === undefined, "There should be no more vars after the current scope ends." );
-          console.log ( 'emitting pop' );
           this.emit ( ops.pop );
           }
         }
@@ -263,7 +250,6 @@ var main = function ( ) {
     cgen.add_temp ( -1 );
     var scope_snapshot = cgen.get_scope_snapshot ( );
     for ( var c in this.children ) {
-      console.log ( 'compiling ', this.children[c] );
       this.children[c].compile ( cgen );
       }
     cgen.apply_scope_snapshot ( scope_snapshot );
@@ -310,7 +296,11 @@ var main = function ( ) {
           compile: compile_while
         },
       {
-      type: 'end',
+      compile: function compile_print ( cgen ) {
+        cgen.emit ( ops.print );
+        }
+        },
+      {
       compile: function compile_end ( cgen ) {
         cgen.emit ( ops.end );
         }
@@ -473,7 +463,7 @@ var main = function ( ) {
   vm.run ( );
 
   vm = make_vm ( cgen.code );
-  vm.debug = true;
+  vm.debug = false;
   vm.run ( );
   };
 main ( );
