@@ -58,7 +58,7 @@ var main = function ( xregexp ) {
       };
     };
 
-  var scope = function () {
+  var scope = function ( ) {
     var root = {
       get_text: function ( key ) {
         return undefined;
@@ -92,8 +92,6 @@ var main = function ( xregexp ) {
             return text_table.get ( key );
             }
           else {
-            //console.log ( 'could not find', key, 'looking in previous scope' );
-            
             return prev_scope.get_text ( key );
             }
           },
@@ -146,55 +144,10 @@ var main = function ( xregexp ) {
         };
       };
     return scope;
-    } ();
-
-  //var lexAll = function ( text ) {
-    //var idx = 0;
-    //var out = [];
-    //var tok;
-    //while ( idx < text.length ) {
-      //tok = lex ( text.substr ( idx ) );
-      //idx += tok.text.length;
-      //out.push ( tok );
-      //}
-    //return out;
-    //};
-
-  //function tableStackGet ( stack, key ) {
-    //var i = stack.length - 1;
-    //var res;
-    //while ( i >= 0 ) {
-      //res = stack[i][key];
-      //if ( res !== undefined ) {
-        //return res;
-        //}
-      //else {
-        //i -= 1;
-        //}
-      //}
-    //return undefined;
-    //};
-
-  //function tableStackSetNew ( stack, key, val ) {
-    //stack[stack.length - 1][key] = val;
-    //};
-
-  //function tableStackChange ( stack, key, val ) {
-    //var i = stack.length - 1;
-    //var res;
-    //while ( i >= 0 ) {
-      //if ( key in stack[i] ) {
-        //stack[i][key] = val;
-        //return;
-        //}
-      //}
-    //throw new Error ( 'Could not change key ' + key + ' to ' + val + ' in ' + stack + '.' );
-    //};
-
+    } ( );
 
   function infix ( lbp, rbp ) {
     rbp = rbp !== undefined ? rbp : lbp;
-    //console.log ( rbp )
     return {
       led: function ( parser, left ) {
         this.left = left;
@@ -214,7 +167,7 @@ var main = function ( xregexp ) {
       };
     };
 
-  var make_parser = function () {
+  var make_parser = function ( ) {
 
     var atom = {
       lbp: 0,
@@ -229,7 +182,10 @@ var main = function ( xregexp ) {
       };
     var escope = scope ( );
     escope.set_text ( '+', infix ( 60 ) );
-    escope.set_text ( '-', obj_or ( prefix ( 80 ), infix ( 60 ) ));
+    escope.set_text ( '*', obj_or ( prefix ( 100 ), infix ( 70 ) ) );
+    escope.set_text ( '/', infix ( 70 ) );
+    escope.set_text ( '%', infix ( 70 ) );
+    escope.set_text ( '-', obj_or ( prefix ( 80 ), infix ( 60 ) ) );
     escope.set_text ( '++', prefix ( 90 ) );
     escope.set_type ( 'identifier', atom );
     escope.set_type ( 'number', atom );
@@ -239,12 +195,10 @@ var main = function ( xregexp ) {
         var to_clone;
 
         if ( token === undefined ) {
-          //console.log ( 'Reached end!' );
           to_clone = end_token;
           }
         else {
           to_clone = this.scope.get_text ( token.text );
-          //console.log ( 'to_clone', to_clone );
           if ( to_clone === undefined ) {
             to_clone = this.scope.get_type ( token.type );
             }
@@ -254,35 +208,30 @@ var main = function ( xregexp ) {
           this.handle_error ( 'token', token );
           }
 
-        //console.log ( 'cloning', to_clone );
         return obj_or ( Object.create ( to_clone || {} ), token );
         },
       get_token: function get_token ( index ) {
         var token;
         
-        //console.log ( 'index', index );
 
         if ( index === undefined ) {
           index = this.token_idx;
           }
 
         while ( index >= this.tokens.length ) {
-          token = lex(this.text.substr(this.text_idx));
+          token = lex ( this.text.substr ( this.text_idx ) );
           if ( ! token ) {
-            return null;
+            return end_token;
             }
 
           this.text_idx += token.text.length;
           this.tokens.push ( token );
           }
-        //var out = this.tokens[this.token_idx];
-        //console.log ( out );
-        //return out;
         return this.lookup_token ( this.tokens[index] );
         },
       handle_error: function handle_error ( expected, other ) {
-        //console.log ( 'expected', expected );
-        //console.log ( 'got', other );
+        console.log ( 'expected', expected );
+        console.log ( 'got', other );
         },
       sadvance: function advance ( expected ) {
         var token;
@@ -299,19 +248,14 @@ var main = function ( xregexp ) {
         var token;
 
         token = this.get_token ( this.token_idx + 1 );
-        //console.log ( 'idx', this.token_idx + 1 );
-        //console.log ( 'token', token );
         while ( token && token.type === 'space' ) {
-          //console.log ( 'skipping space' );
           this.token_idx += 1;
           token = this.get_token ( this.token_idx + 1 );
-          //console.log ( 'idx', this.token_idx + 1 );
           }
         if ( ! token || ( expected !== undefined && token.text !== expected ) ) {
           this.handle_error ( expected );
           }
         else {
-          //console.log ( 'token_idx', this.token_idx );
           this.token_idx += 1;
           }
         },
@@ -321,25 +265,18 @@ var main = function ( xregexp ) {
 
         this.scope = escope;
         t = this.get_token ( );
-        //console.log ( 't', t );
 
         if ( rbp === undefined ) {
           rbp = 0;
           }
 
-        //console.log ( 'advancing' );
         this.advance ( );
-        //console.log ( 't', t );
         left = t.nud ( this );
-        //console.log ( 'left', left );
         while ( rbp < this.get_token ( ).lbp ) {
           t = this.get_token ( );
-          //console.log ( 't', t );
           this.advance ( );
           left = t.led ( this, left );
-          //console.log ( 'left', left );
           }
-        //console.log ( 'exited on token', this.get_token ( ) );
         return left;
         },
       };
@@ -353,159 +290,6 @@ var main = function ( xregexp ) {
         } );
       };
     } ( );
-
-  var parser = make_parser ( scope ( ) );
-  //var parser = {
-    //textTables: [
-      //],
-    //exprTextTable: {
-      //'+': infix ( 60 ),
-      //'-': obj_or ( infix ( 60 ), prefix ( 80 ) ),
-      //'++': prefix ( 90 ),
-      //'if': keyword,
-      //'while': keyword,
-      //},
-    //typeTables: [
-      //],
-    //exprTypeTable: {
-      //'number' : atom,
-      //'identifier': atom,
-      //'space': null,
-      //},
-    //textTablePush: function ( table ) {
-      //this.textTables.push ( table );
-      //},
-    //typeTablePush: function ( table ) {
-      //this.typeTables.push ( table );
-      //},
-    //textTableGet: function ( key ) {
-      //return tableStackGet ( this.textTables, key );
-      //},
-    //typeTableGet: function ( key ) {
-      //return tableStackGet ( this.typeTables, key );
-      //},
-    //textTableSetNew: function ( key, val ) {
-      //tableStackSetNew ( this.textTables, key, val );
-      //},
-    //typeTableSetNew: function ( key, val ) {
-      //tableStackSetNew ( this.typeTables, key, val );
-      //},
-    //splitOp: function ( token ) {
-      //var i = token.text.length;
-      //while ( this.textTableGet ( token.text.substr ( 0, i ) ) === undefined ) {
-          //i -= 1;
-          //}
-      //if ( i === 0 ) {
-          //throw 'Could not identify operator ' + token.text;
-          //}
-      //if ( i === token.text.length ) {
-          //return [token];
-          //}
-      //else {
-          //return [obj_or ( token, {text: token.text.substr ( 0, i )} )].concat (
-                  //this.splitOp ( obj_or ( token, {text: token.text.substr ( i )} ) ) );
-          //}
-      //},
-    //moreTokens: function ( count ) {
-      //while ( count > 0 ) {
-        //var token = lex ( this.text.substr ( this.text_idx ) );
-        //if ( token ) {
-          //this.text_idx += token.text.length;
-          //if ( token.type === 'operator' ) {
-            //this.tokens.concat ( this.splitOp ( token ) );
-            //}
-          //else {
-            //this.tokens.push ( token );
-            //}
-          //}
-        //count -= 1;
-        //}
-      //},
-    //nextToken: function ( ) {
-      //if ( this.tokens.length === this.idx ) {
-        //this.moreTokens ( 1 )
-        //}
-      //this.current = this.tokens[this.idx];
-      //this.idx += 1;
-      //},
-    //peekToken: function ( idx ) {
-      //var count;
-      //idx = idx || 0;
-      //count = 1 + idx + this.idx - this.tokens.length;
-      //if ( count > 0 ) {
-        //this.moreTokens ( count );
-        //}
-      //return this.tokens[this.idx + idx];
-      //},
-    //loadCurrentFromTable: function ( ) {
-      //var toClone;
-      //if ( !this.current ) {
-        //this.current = {text: ' ( end )', type: ' ( special )', lbp: 0};
-        //return;
-        //}
-      //toClone = this.textTableGet ( this.current.text );
-      //if ( toClone !== undefined ) {
-        //this.current = obj_or ( Object.create ( toClone ), this.current );
-        //}
-      //else {
-        //toClone = this.typeTableGet ( this.current.type );
-        //if ( toClone === null ) {
-          //this.advance ( );
-          //}
-        //else if ( toClone === undefined ){
-          //throw new Error ( 'Unknown token: ' + this.current.text );
-          //}
-        //else {
-          //this.current = obj_or ( Object.create ( toClone ), this.current );
-          //}
-        //}
-      //},
-    //advance: function ( ) {
-      //this.nextToken ( );
-      //console.log ( this.tokens );
-      //this.loadCurrentFromTable ( );
-      //},
-    //expr: function ( rbp ) {
-      //var left;
-      //var t = this.current;
-      //if ( rbp === undefined ) {
-        //rbp = 0;
-        //}
-      //this.advance ( );
-      //left = t.nud ( this );
-      //while ( rbp < this.current.lbp ) {
-        //t = this.current;
-        //this.advance ( );
-        //left = t.led ( this, left );
-        //}
-      //return left;
-      //},
-    //parse_expr: function ( text ) {
-      //this.typeTablePush ( this.exprTypeTable );
-      //this.textTablePush ( this.exprTextTable );
-      //this.idx = 0;
-      //this.tokens = lexAll ( text );
-      ////this.tokens = [];
-      //this.moreTokens ( 3 );
-      //this.advance ( );
-      //return this.expr ( 0 )
-      //}
-  //};
-
-  //function make_parser ( text ) {
-    //return obj_or ( Object.create ( parser ), {
-      //idx: 0,
-      //tokens: [],
-      //current: null,
-      //text_idx: 0,
-      //text: text || "",
-      //text_exhausted: true,
-      //} );
-    //};
-
-  //function parse_expr ( text ) {
-    //return make_parser ( ).parse_expr ( text )
-    //}
 
   console.log ( util.inspect ( make_parser ( '++apple + -1 - - bad' ).expr ( ), { colors: true, depth: 100 } ) );
   };
