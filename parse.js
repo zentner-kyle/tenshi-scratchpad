@@ -8,8 +8,8 @@ var main = function ( xregexp ) {
         ' (?<space>       \\p{Whitespace}+)                   |' +
         ' (?<number>      [0-9]+)                             |' +
         ' (?<identifier>  [\\p{Letter}_] [\\p{Letter}_0-9]*)  |' +
-        ' (?<operator>    [^\\p{Letter}_0-9\\p{Whitespace}]+)  '
-        , 'x' );
+        ' (?<operator>    [^\\p{Letter}_0-9\\p{Whitespace}]+)  ' ,
+        'x' );
     var types = ['space', 'number', 'identifier', 'operator'];
     return function lex ( text ) {
       var match = xregexp.exec ( text, token_reg );
@@ -21,7 +21,7 @@ var main = function ( xregexp ) {
           return {type: types[t], text: match[types[t]]};
           }
         }
-      }
+      };
     } ( );
 
   function obj_or ( obja, objb ) {
@@ -45,18 +45,63 @@ var main = function ( xregexp ) {
         return storage[key + '$'];
         },
       'set': function ( key, val ) {
-        //console.log ( key, '=', val );
+        //console.log ( 'setting', key, val );
         storage[key + '$'] = val;
+        return this;
         },
       'has': function ( key ) {
-        //console.log ( storage );
         return key + '$' in storage;
         },
       'delete': function ( key ) {
         return delete storage[key + '$'];
-        }
+        },
+      'map': function ( func ) {
+        var self = this;
+
+        this.each ( function ( key, val ) {
+          //console.log ( key );
+          self.set ( key, func ( key, val ) );
+          } );
+        return this;
+        },
+      'each': function ( func ) {
+        var key;
+        var val;
+
+        //console.log ( 'in each' );
+        //console.log ( 'storage', storage );
+        //console.log ( util.inspect( storage ) );
+        if ( util.inspect( storage ) === '{}' ) {
+          'lol' = 1;
+          //throw 'wat';
+          }
+        for ( key in storage ) {
+          val = storage[key];
+          key = key.substr( 0, key.length - 1 );
+          func ( key, val );
+          }
+        //console.log ( 'leaving each' );
+        //console.log ( 'storage', storage );
+        return this;
+        },
+      'toString': function ( val_str ) {
+        var out = '{';
+
+
+        if ( val_str === undefined ) {
+          val_str = function ( val ) {
+            return val.toString ( );
+            };
+          }
+        this.each ( function ( key, val ) {
+          out += '' + key + ' : ' + val_str ( val ) + ',';
+          } );
+
+        out += '}';
+        return out;
+        },
       };
-    };
+    }
 
   var scope = function ( ) {
     var root = {
@@ -75,8 +120,10 @@ var main = function ( xregexp ) {
       reset_type: function ( key, val ) {
         },
       load_text: function ( table ) {
+        return this;
         },
       load_type: function ( table ) {
+        return this;
         },
       };
     function scope ( prev_scope ) {
@@ -87,6 +134,43 @@ var main = function ( xregexp ) {
         prev_scope = root;
         }
       return {
+        map_text: function ( func ) {
+          text_table.map ( func );
+          return this;
+          },
+        map_type: function ( func ) {
+          type_table.map ( func );
+          return this;
+          },
+        load_text: function ( table ) {
+          var self = this;
+          //console.log ( 'in load text' );
+          //console.log ( )
+
+          table.each ( function ( key, val ) {
+            self.set_text ( key, obj_or ( self.get_text ( key ) || Object.create(null), val ) );
+            } );
+          return this;
+          },
+        load_type: function ( table ) {
+          var self = this;
+
+          table.each ( function ( key, val ) {
+            self.set_type ( key, obj_or ( self.get_type ( key ) || Object.create(null), val ) );
+            } );
+          return this;
+          },
+        load: function ( other ) {
+          var self = this;
+
+          other.map_text ( function ( key, val ) {
+            return obj_or ( self.get_text ( key ), val );
+            } );
+          other.map_text ( function ( key, val ) {
+            return obj_or ( self.get_type ( key ), val );
+            } );
+          return this;
+          },
         get_text: function ( key ) {
           if ( text_table.has ( key ) ) {
             return text_table.get ( key );
@@ -129,20 +213,38 @@ var main = function ( xregexp ) {
             }
           return this;
           },
-        load_text: function ( table ) {
-          var key;
-          for ( key in table ) {
-            this.set_text ( key, table[key] );
-            }
+        debug_print: function ( ) {
+          console.log ( 'text' );
+          this.map_text ( function ( key, val ) {
+            console.log ( key, val );
+            return val;
+            } );
+          console.log ( 'type' );
+          this.map_type ( function ( key, val ) {
+            console.log ( key, val );
+            return val;
+            } );
           },
-        load_type: function ( table ) {
-          var key;
-          for ( key in table ) {
-            this.set_type ( key, table[key] );
-            }
-          },
+        //load_text: function ( table ) {
+          //var key;
+
+          //table.map ( )
+          //for ( key in text_table ) {
+            //console.log ( key );
+            //this.set_text ( key, table[key] );
+            //}
+          //},
+        //load_type: function ( table ) {
+          //var key;
+          //for ( key in table ) {
+            //this.set_type ( key, table[key] );
+            //}
+          //},
+        toString: function ( ) {
+          return text_table.toString ( ) + type_table.toString ( );
+          }
         };
-      };
+      }
     return scope;
     } ( );
 
@@ -156,7 +258,7 @@ var main = function ( xregexp ) {
         },
       lbp: lbp,
       };
-    };
+    }
 
   function prefix ( rbp ) {
     return {
@@ -165,7 +267,7 @@ var main = function ( xregexp ) {
         return this;
         },
       };
-    };
+    }
 
   var make_parser = function ( ) {
 
@@ -180,16 +282,33 @@ var main = function ( xregexp ) {
       'text':'(end)',
       'type':'special',
       };
+    var infix_table = string_map ( {
+      '+' : 60,
+      '-' : 60,
+      '*' : 70,
+      '/' : 70,
+      '%' : 70,
+      } ).map ( function ( key, val ) { return infix ( val ); } );
+    //infix_table.map ( infix )
+    var prefix_table = string_map ( {
+      '+' : 80,
+      '-' : 80,
+      '++' : 90,
+      '--' : 90,
+      } ).map ( function ( key, val ) { return prefix ( val ); } );
+    var type_table = string_map ( {
+      'identifier' : atom,
+      'number' : atom,
+      'space' : atom,
+      } );
     var escope = scope ( );
-    escope.set_text ( '+', infix ( 60 ) );
-    escope.set_text ( '*', obj_or ( prefix ( 100 ), infix ( 70 ) ) );
-    escope.set_text ( '/', infix ( 70 ) );
-    escope.set_text ( '%', infix ( 70 ) );
-    escope.set_text ( '-', obj_or ( prefix ( 80 ), infix ( 60 ) ) );
-    escope.set_text ( '++', prefix ( 90 ) );
-    escope.set_type ( 'identifier', atom );
-    escope.set_type ( 'number', atom );
-    escope.set_type ( 'space', atom );
+
+    escope.load_text ( infix_table );
+    escope.load_text ( prefix_table );
+    escope.load_type ( type_table );
+
+    //escope.debug_print ( );
+
     var root_parser = {
       lookup_token: function lookup_token ( token ) {
         var to_clone;
@@ -271,6 +390,7 @@ var main = function ( xregexp ) {
           }
 
         this.advance ( );
+        //console.log ( 't', t );
         left = t.nud ( this );
         while ( rbp < this.get_token ( ).lbp ) {
           t = this.get_token ( );
