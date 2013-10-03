@@ -45,7 +45,6 @@ var main = function ( xregexp ) {
         return storage[key + '$'];
         },
       'set': function ( key, val ) {
-        //console.log ( 'setting', key, val );
         storage[key + '$'] = val;
         return this;
         },
@@ -59,7 +58,6 @@ var main = function ( xregexp ) {
         var self = this;
 
         this.each ( function ( key, val ) {
-          //console.log ( key );
           self.set ( key, func ( key, val ) );
           } );
         return this;
@@ -68,20 +66,11 @@ var main = function ( xregexp ) {
         var key;
         var val;
 
-        //console.log ( 'in each' );
-        //console.log ( 'storage', storage );
-        //console.log ( util.inspect( storage ) );
-        if ( util.inspect( storage ) === '{}' ) {
-          'lol' = 1;
-          //throw 'wat';
-          }
         for ( key in storage ) {
           val = storage[key];
           key = key.substr( 0, key.length - 1 );
           func ( key, val );
           }
-        //console.log ( 'leaving each' );
-        //console.log ( 'storage', storage );
         return this;
         },
       'toString': function ( val_str ) {
@@ -103,7 +92,7 @@ var main = function ( xregexp ) {
       };
     }
 
-  var scope = function ( ) {
+  var make_scope = function ( ) {
     var root = {
       get_text: function ( key ) {
         return undefined;
@@ -126,7 +115,7 @@ var main = function ( xregexp ) {
         return this;
         },
       };
-    function scope ( prev_scope ) {
+    return function make_scope ( prev_scope ) {
       var text_table = string_map ( );
       var type_table = string_map ( );
 
@@ -144,8 +133,6 @@ var main = function ( xregexp ) {
           },
         load_text: function ( table ) {
           var self = this;
-          //console.log ( 'in load text' );
-          //console.log ( )
 
           table.each ( function ( key, val ) {
             self.set_text ( key, obj_or ( self.get_text ( key ) || Object.create(null), val ) );
@@ -225,27 +212,11 @@ var main = function ( xregexp ) {
             return val;
             } );
           },
-        //load_text: function ( table ) {
-          //var key;
-
-          //table.map ( )
-          //for ( key in text_table ) {
-            //console.log ( key );
-            //this.set_text ( key, table[key] );
-            //}
-          //},
-        //load_type: function ( table ) {
-          //var key;
-          //for ( key in table ) {
-            //this.set_type ( key, table[key] );
-            //}
-          //},
         toString: function ( ) {
           return text_table.toString ( ) + type_table.toString ( );
           }
         };
       }
-    return scope;
     } ( );
 
   function infix ( lbp, rbp ) {
@@ -289,7 +260,6 @@ var main = function ( xregexp ) {
       '/' : 70,
       '%' : 70,
       } ).map ( function ( key, val ) { return infix ( val ); } );
-    //infix_table.map ( infix )
     var prefix_table = string_map ( {
       '+' : 80,
       '-' : 80,
@@ -301,13 +271,22 @@ var main = function ( xregexp ) {
       'number' : atom,
       'space' : atom,
       } );
-    var escope = scope ( );
+    var escope = make_scope ( );
 
     escope.load_text ( infix_table );
     escope.load_text ( prefix_table );
     escope.load_type ( type_table );
 
+    var sscope = make_scope ( );
+    sscope.load_text ( string_map ( {
+      '=' : infix(10),
+      } ) );
+    sscope.load_type ( string_map ( {
+      'identifier' : atom,
+       } ) );
+
     //escope.debug_print ( );
+    sscope.debug_print ( );
 
     var root_parser = {
       lookup_token: function lookup_token ( token ) {
@@ -352,19 +331,21 @@ var main = function ( xregexp ) {
         console.log ( 'expected', expected );
         console.log ( 'got', other );
         },
-      sadvance: function advance ( expected ) {
-        var token;
+      //sadvance: function advance ( expected ) {
+        //var token;
 
-        token = this.get_token ( this.token_idx );
-        if ( ! token || ( expected !== undefined && token.text !== expected ) ) {
-          this.handle_error ( expected );
-          }
-        else {
-          this.token_idx += 1;
-          }
-        },
+        //token = this.get_token ( this.token_idx );
+        //if ( ! token || ( expected !== undefined && token.text !== expected ) ) {
+          //this.handle_error ( expected );
+          //}
+        //else {
+          //this.token_idx += 1;
+          //}
+        //},
       advance: function advance ( expected ) {
         var token;
+
+        console.log ( 'advancing' );
 
         token = this.get_token ( this.token_idx + 1 );
         while ( token && token.type === 'space' ) {
@@ -381,6 +362,7 @@ var main = function ( xregexp ) {
       expr: function expr ( rbp ) {
         var left;
         var t;
+        var old_scope = this.scope;
 
         this.scope = escope;
         t = this.get_token ( );
@@ -390,15 +372,54 @@ var main = function ( xregexp ) {
           }
 
         this.advance ( );
-        //console.log ( 't', t );
         left = t.nud ( this );
         while ( rbp < this.get_token ( ).lbp ) {
           t = this.get_token ( );
           this.advance ( );
           left = t.led ( this, left );
           }
+        this.scope = old_scope;
         return left;
         },
+      more: function more ( ) {
+        return this.text_idx !== this.text.length;
+        },
+      statement: function statement ( rbp ) {
+        var left;
+        var t;
+        var old_scope = this.scope;
+
+        this.scope = sscope;
+        t = this.get_token ( );
+
+        if ( rbp === undefined ) {
+          rbp = 0;
+          }
+
+        this.advance ( );
+        console.log ( 't', t );
+        left = t.nud ( this );
+        while ( rbp < this.get_token ( ).lbp ) {
+          t = this.get_token ( );
+          this.advance ( );
+          left = t.led ( this, left );
+          }
+        this.scope = old_scope;
+        return left;
+        },
+      block: function block ( indent ) {
+        var root = { text: '(root)', children: [] };
+
+        if ( indent === undefined ) {
+          indent = '';
+          }
+
+        while ( this.more ( ) ) {
+          console.log ( 'children', root.children );
+          root.children.push ( this.statement ( ) );
+          }
+        return root;
+        }
       };
     return function ( text ) {
       return obj_or ( Object.create ( root_parser ), {
@@ -406,11 +427,24 @@ var main = function ( xregexp ) {
         text: text || "",
         token_idx: 0,
         text_idx: 0,
-        scope: scope ( ),
+        scope: make_scope ( ),
+        line_num: 0,
         } );
       };
     } ( );
 
-  console.log ( util.inspect ( make_parser ( '++apple + -1 - - bad' ).expr ( ), { colors: true, depth: 100 } ) );
+  var to_parse = '' +
+  'n = 100\n' +
+  'a = 1\n' +
+  'b = 1\n';
+  //+
+  //'while n != 0:\n' +
+  //'    temp = a + b\n' +
+  //'    a = b\n' +
+  //'    b = temp\n' +
+  //'    n = n - 1\n';
+  console.log ( 'parsing', to_parse );
+  console.log ( util.inspect ( make_parser ( to_parse ).block ( ), { colors: true, depth: 100 } ) );
+  //console.log ( util.inspect ( make_parser ( '++apple + -1 - - bad' ).expr ( ), { colors: true, depth: 100 } ) );
   };
 main ( xregexp );
