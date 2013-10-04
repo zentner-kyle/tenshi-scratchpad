@@ -3,6 +3,10 @@ var xregexp = require ( './xregexp/xregexp-all.js' );
 
 var main = function ( xregexp ) {
 
+  function debug ( ) {
+    console.log.apply ( console, arguments );
+    }
+
   var lex = function ( ) {
     var token_reg = xregexp ( 
         ' (?<space>       \\p{Whitespace}+)                   |' +
@@ -259,6 +263,8 @@ var main = function ( xregexp ) {
       '*' : 70,
       '/' : 70,
       '%' : 70,
+      '==': 40,
+      '!=': 40,
       } ).map ( function ( key, val ) { return infix ( val ); } );
     var prefix_table = string_map ( {
       '+' : 80,
@@ -280,6 +286,18 @@ var main = function ( xregexp ) {
     var sscope = make_scope ( escope );
     sscope.load_text ( string_map ( {
       '=' : infix(10),
+      ':' : { lbp: 0 },
+      'while': {
+        nud: function ( parser ) {
+          this.condition = parser.expr ( );
+          debug ( 'got condition', this.condition );
+          debug ( 'advancing for :' );
+          var out = parser.advance ( ':' );
+          debug ( 'got', out );
+          this.block = parser.block ( );
+          return this;
+          },
+        },
       } ) );
     sscope.load_type ( string_map ( {
       'identifier' : atom,
@@ -302,17 +320,11 @@ var main = function ( xregexp ) {
             }
           }
 
-        //if ( to_clone === undefined ) {
-          //this.handle_error ( 'token', token );
-          //}
-
         return obj_or ( Object.create ( to_clone || {} ), token );
         },
       get_token: function get_token ( index ) {
         var token;
         
-        //console.log ( this.tokens );
-
         if ( index === undefined ) {
           index = this.token_idx;
           }
@@ -326,21 +338,21 @@ var main = function ( xregexp ) {
           this.text_idx += token.text.length;
           this.tokens.push ( token );
           }
-        //console.log ( 'token', this.tokens[index] );
         var out = this.lookup_token ( this.tokens[index] );
-        //console.log ( 'out', out );
         return out;
         },
       handle_error: function handle_error ( expected, other ) {
-        //'lol' = 1;
         console.log ( 'expected', expected );
         console.log ( 'got', other );
         },
       match: function match ( matcher, token ) {
 
-        if ( matcher &&
-             ( matcher.type === undefined &&
-               matcher.text === undefined ) ) {
+        if ( ! matcher ) {
+          return false;
+          }
+
+        if ( matcher.type === undefined &&
+             matcher.text === undefined ) {
           return true;
           }
 
@@ -351,9 +363,7 @@ var main = function ( xregexp ) {
           } 
 
         if ( matcher.type !== undefined ) {
-          console.log ( 'found type' );
           if ( matcher.type === token.type ) {
-            console.log ( 'type matches' );
             return true;
             }
           }
@@ -367,64 +377,35 @@ var main = function ( xregexp ) {
         },
       advance: function advance ( expected ) {
         var token;
-        var skip = ( expected && expected.skip ) || { type: 'space' };
+        var skip = { type: 'space' };
         var idx = this.token_idx;
         var peek = expected && expected.peek;
 
-        //console.log ( 'expected', expected );
-        //if ( expected === undefined || expected.skip === undefined ) {
-          //skip = { type: 'space' };
-          //}
-        //else {
-          //skip = expected.skip;
-          //}
-        //console.log ( 'advancing' );
-        //if ( expected === undefined ||
-             //( expected.type === undefined && 
-               //expected.text === undefined ) ) {
-          ////'lol' = 1;
-          //expected = {};
-          //any = true;
-          //}
-        //if ( expected.skip === undefined ) {
-          //expected.skip = { type: 'space' };
-          //}
-        //console.log ( 'expected', expected );
-        //console.log ( 'any', any );
+        if ( expected && expected.skip !== undefined ) {
+          skip = expected.skip;
+          }
 
         token = this.get_token ( idx + 1 );
         while ( this.match ( skip, token ) ) {
-          //console.log ( 'skipping', token );
           idx += 1;
           token = this.get_token ( idx + 1 );
           }
-        //console.log ( 'stopped skipping', this.get_token ( idx + 1 ) );
         if ( expected && ! this.match ( expected, token ) ) {
-          //console.log ( 'did not match' );
-          //console.log ( 'expected', expected );
           if ( peek ) {
             return null;
             }
           else {
-            //console.log ( 'peek', expected.peek );
             this.handle_error ( expected );
             }
           }
         else {
-          //console.log ( 'advancing' );
-          //console.log ( 'any', any );
-          //console.log ( 'peek', peek );
           if ( ! peek ) {
             this.token_idx = idx + 1;
-            //this.token_idx += 1;
-            //this.token_idx += 1;
             }
           }
-        token = this.get_token ( idx + 1 );
-        console.log ( 'got', token );
-        return token;
+        return this.get_token ( idx + 1 );
         },
-      expr: function expr ( rbp ) {
+      expr: function expr ( rbp, scope ) {
         var left;
         var t;
         var old_scope = this.scope;
@@ -432,69 +413,42 @@ var main = function ( xregexp ) {
         if ( rbp === undefined ) {
           rbp = 0;
           }
+        if ( scope === undefined ) {
+          scope = escope;
+          }
 
-        this.scope = escope;
+        this.scope = scope;
+        this.scope.debug_print ( );
         t = this.advance ( );
-        //t = this.get_token ( );
 
-        //this.advance ( );
-        console.log ( 't', t );
         left = t.nud ( this );
         while ( rbp < this.advance ( { peek: true } ).lbp ) {
-          console.log ( 'in while loop' );
           t = this.advance ( );
-          //t = this.get_token ( );
-          //this.advance ( );
-          console.log ( 't', t );
           left = t.led ( this, left );
           }
-        //console.log ( rbp, '<', this.get_token ( this.token_idx + 1 ).lbp );
-        //console.log ( this.get_token ( this.token_idx + 1 ) );
         this.scope = old_scope;
         return left;
         },
       more: function more ( ) {
         return this.text_idx !== this.text.length;
         },
-      statement: function statement ( rbp ) {
-        var left;
-        var t;
-        var old_scope = this.scope;
-
-        if ( rbp === undefined ) {
-          rbp = 0;
-          }
-
-        this.scope = sscope;
-        t = this.advance ( );
-
-        left = t.nud ( this );
-        while ( rbp < this.advance ( { peek: true } ).lbp ) {
-          t = this.advance ( );
-          left = t.led ( this, left );
-          }
-        this.scope = old_scope;
-        return left;
+      statement: function statement ( ) {
+        return this.expr ( 0, sscope );
         },
       block: function block ( indent ) {
         var root = { text: '(root)', children: [] };
-        console.log ( 'tokens', this.tokens );
-        console.log ( 'idx', this.token_idx );
         var token = this.advance ( { type: 'space', peek: true, skip: null } );
-        console.log ( 'tokens', this.tokens );
-        console.log ( 'idx', this.token_idx );
-        console.log ( 'token', token );
-        //console.log ( 'tokens', this.tokens );
-        //console.log ( 'the token', this.get_token ( ) );
-        //console.log ( 'current', this.advance ( ) );
-        //return root;
+        debug ( token );
 
-        if ( indent === undefined ) {
-          indent = '';
-          }
+        indent = indent || ( token && token.text.replace ( '\n', '' ) ) || '';
+        debug ( 'indent "' + indent + '"' );
 
         while ( this.more ( ) ) {
-          //console.log ( 'children', root.children );
+          token = this.advance ( { type: 'space', peek: true, skip: null } );
+          if ( token && token.text.replace('\n', '') !== indent ) {
+            debug ( token );
+            return root;
+            }
           root.children.push ( this.statement ( ) );
           }
         return root;
@@ -515,14 +469,14 @@ var main = function ( xregexp ) {
   var to_parse = '' +
   'n = 100\n' +
   'a = 1\n' +
-  'b = 1\n';
-  //+
-  //'while n != 0:\n' +
-  //'    temp = a + b\n' +
-  //'    a = b\n' +
-  //'    b = temp\n' +
-  //'    n = n - 1\n';
-  //console.log ( 'parsing', to_parse );
+  'b = 1\n'
+  +
+  'while n != 0:\n' +
+  '    temp = a + b\n' +
+  '    a = b\n' +
+  '    b = temp\n' +
+  '    n = n - 1\n';
+  debug ( 'parsing', to_parse );
   console.log ( util.inspect ( make_parser ( to_parse ).block ( ), { colors: true, depth: 100 } ) );
   //console.log ( util.inspect ( make_parser ( '++apple + -1 - - bad' ).expr ( ), { colors: true, depth: 100 } ) );
   //console.log ( util.inspect ( make_parser ( 'a + 1' ).expr ( ), { colors: true, depth: 100 } ) );
