@@ -290,10 +290,7 @@ var main = function ( xregexp ) {
       'while': {
         nud: function ( parser ) {
           this.condition = parser.expr ( );
-          debug ( 'got condition', this.condition );
-          debug ( 'advancing for :' );
           var out = parser.advance ( ':' );
-          debug ( 'got', out );
           this.block = parser.block ( );
           return this;
           },
@@ -418,7 +415,6 @@ var main = function ( xregexp ) {
           }
 
         this.scope = scope;
-        this.scope.debug_print ( );
         t = this.advance ( );
 
         left = t.nud ( this );
@@ -436,22 +432,19 @@ var main = function ( xregexp ) {
         return this.expr ( 0, sscope );
         },
       block: function block ( indent ) {
-        var root = { text: '(root)', children: [] };
+        var children = [];
         var token = this.advance ( { type: 'space', peek: true, skip: null } );
-        debug ( token );
 
         indent = indent || ( token && token.text.replace ( '\n', '' ) ) || '';
-        debug ( 'indent "' + indent + '"' );
 
         while ( this.more ( ) ) {
           token = this.advance ( { type: 'space', peek: true, skip: null } );
           if ( token && token.text.replace('\n', '') !== indent ) {
-            debug ( token );
-            return root;
+            return children;
             }
-          root.children.push ( this.statement ( ) );
+          children.push ( this.statement ( ) );
           }
-        return root;
+        return children;
         }
       };
     return function ( text ) {
@@ -469,16 +462,14 @@ var main = function ( xregexp ) {
   var to_parse = '' +
   'n = 100\n' +
   'a = 1\n' +
-  'b = 1\n'
-  +
+  'b = 1\n' +
   'while n != 0:\n' +
   '    temp = a + b\n' +
   '    a = b\n' +
   '    b = temp\n' +
   '    n = n - 1\n';
-  debug ( 'parsing', to_parse );
   console.log ( util.inspect ( make_parser ( to_parse ).block ( ), { colors: true, depth: 100 } ) );
-  //console.log ( util.inspect ( make_parser ( '++apple + -1 - - bad' ).expr ( ), { colors: true, depth: 100 } ) );
-  //console.log ( util.inspect ( make_parser ( 'a + 1' ).expr ( ), { colors: true, depth: 100 } ) );
+  console.log ( util.inspect ( make_parser ( '++apple + -1 - - bad' ).expr ( ), { colors: true, depth: 100 } ) );
+  console.log ( util.inspect ( make_parser ( 'a + 1' ).expr ( ), { colors: true, depth: 100 } ) );
   };
 main ( xregexp );
