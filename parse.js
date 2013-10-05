@@ -335,8 +335,7 @@ var main = function ( xregexp ) {
           this.text_idx += token.text.length;
           this.tokens.push ( token );
           }
-        var out = this.lookup_token ( this.tokens[index] );
-        return out;
+        return this.tokens[index];
         },
       handle_error: function handle_error ( expected, other ) {
         console.log ( 'expected', expected );
@@ -378,6 +377,10 @@ var main = function ( xregexp ) {
         var idx = this.token_idx;
         var peek = expected && expected.peek;
 
+        if ( ! ( expected instanceof Object ) ) {
+          expected = { text: expected };
+          }
+
         if ( expected && expected.skip !== undefined ) {
           skip = expected.skip;
           }
@@ -400,7 +403,7 @@ var main = function ( xregexp ) {
             this.token_idx = idx + 1;
             }
           }
-        return this.get_token ( idx + 1 );
+        return this.lookup_token ( this.get_token ( idx + 1 ) );
         },
       expr: function expr ( rbp, scope ) {
         var left;
