@@ -71,6 +71,7 @@ apply patch table:
 
 apply fixup:
   look up object location in object table
+  if you can't find the object, construct it
   write result into package at offset
 
 on data receive:
@@ -123,3 +124,43 @@ object types:
 
 string data should relocatable
 bytecode (stored in functions) should be relocatable
+
+TODO Error handling!
+
+
+opcodes:
+  opcodes are 8 bits each, with up to three one byte arguments.
+  up to 4 bytecodes are gathered together into a 4 byte "bunch"
+  bunches may contain no-ops, but no opcode will have its arguments in a seperate bunch
+  opcodes may also read arbitrary values out of the bytecode stream (i.e. for load immediate, function call).
+
+arithmetic:
+  add
+  addf
+  bn1
+  bn2
+  bn3
+  div
+  divf
+  dup
+  end
+  eq
+  funcall
+  j1
+  j2
+  j3
+  li
+  li1
+  li2
+  li3
+  mod
+  modf
+  mul
+  mulf
+  noop
+  not
+  pop
+  return
+  set
+  sub
+  subf
