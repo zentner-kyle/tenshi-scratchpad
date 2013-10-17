@@ -1,7 +1,25 @@
-var util = require ( 'util' );
-var xregexp = require ( './xregexp/xregexp-all.js' );
+var require = require;
+var export_val;
+var exported_symbols = [];
+if ( require === undefined ) {
+  export_val = function ( name, val ) {
+    exported_symbols.push ( name );
+    };
+  require = function ( filename ) {
+    return components.utils.import("chrome://angel-player/content/angelic/" + filename);
+    };
+  }
+else {
+  export_val = function ( name, val ) {
+    exports[name] = val;
+    };
+  }
 
-var main = function ( xregexp ) {
+var main = function ( ) {
+  var xregexp = require ( './xregexp/xregexp-all.js' );
+  var string_map = require ( './string_map.js' );
+  var scope = require ( './scope.js' );
+  var misc = require ( './misc.js' );
 
   function debug ( ) {
     console.log.apply ( console, arguments );
@@ -28,201 +46,6 @@ var main = function ( xregexp ) {
       };
     } ( );
 
-  function obj_or ( obja, objb ) {
-    var k;
-    for ( k in objb ) {
-      obja[k] = objb[k];
-      }
-    return obja;
-    }
-
-  function string_map ( obj ) {
-    var storage = {};
-
-    if ( obj !== undefined ) {
-      for ( var k in obj ) {
-        storage[k + '$'] = obj[k];
-        }
-      }
-    return {
-      'get': function ( key ) {
-        return storage[key + '$'];
-        },
-      'set': function ( key, val ) {
-        storage[key + '$'] = val;
-        return this;
-        },
-      'has': function ( key ) {
-        return key + '$' in storage;
-        },
-      'delete': function ( key ) {
-        return delete storage[key + '$'];
-        },
-      'map': function ( func ) {
-        var self = this;
-
-        this.each ( function ( key, val ) {
-          self.set ( key, func ( key, val ) );
-          } );
-        return this;
-        },
-      'each': function ( func ) {
-        var key;
-        var val;
-
-        for ( key in storage ) {
-          val = storage[key];
-          key = key.substr( 0, key.length - 1 );
-          func ( key, val );
-          }
-        return this;
-        },
-      'toString': function ( val_str ) {
-        var out = '{';
-
-
-        if ( val_str === undefined ) {
-          val_str = function ( val ) {
-            return val.toString ( );
-            };
-          }
-        this.each ( function ( key, val ) {
-          out += '' + key + ' : ' + val_str ( val ) + ',';
-          } );
-
-        out += '}';
-        return out;
-        },
-      };
-    }
-
-  var make_scope = function ( ) {
-    var root = {
-      get_text: function ( key ) {
-        return undefined;
-        },
-      get_type: function ( key ) {
-        return undefined;
-        },
-      set_text: function ( key, val ) {
-        },
-      set_type: function ( key, val ) {
-        },
-      reset_text: function ( key, val ) {
-        },
-      reset_type: function ( key, val ) {
-        },
-      load_text: function ( table ) {
-        return this;
-        },
-      load_type: function ( table ) {
-        return this;
-        },
-      };
-    return function make_scope ( prev_scope ) {
-      var text_table = string_map ( );
-      var type_table = string_map ( );
-
-      if ( prev_scope === undefined ) {
-        prev_scope = root;
-        }
-      return {
-        map_text: function ( func ) {
-          text_table.map ( func );
-          return this;
-          },
-        map_type: function ( func ) {
-          type_table.map ( func );
-          return this;
-          },
-        load_text: function ( table ) {
-          var self = this;
-
-          table.each ( function ( key, val ) {
-            self.set_text ( key, obj_or ( self.get_text ( key ) || Object.create(null), val ) );
-            } );
-          return this;
-          },
-        load_type: function ( table ) {
-          var self = this;
-
-          table.each ( function ( key, val ) {
-            self.set_type ( key, obj_or ( self.get_type ( key ) || Object.create(null), val ) );
-            } );
-          return this;
-          },
-        load: function ( other ) {
-          var self = this;
-
-          other.map_text ( function ( key, val ) {
-            return obj_or ( self.get_text ( key ), val );
-            } );
-          other.map_text ( function ( key, val ) {
-            return obj_or ( self.get_type ( key ), val );
-            } );
-          return this;
-          },
-        get_text: function ( key ) {
-          if ( text_table.has ( key ) ) {
-            return text_table.get ( key );
-            }
-          else {
-            return prev_scope.get_text ( key );
-            }
-          },
-        get_type: function ( key ) {
-          if ( type_table.has ( key ) ) {
-            return type_table.get ( key );
-            }
-          else {
-            return prev_scope.get_type ( key );
-            }
-          },
-        set_text: function ( key, val ) {
-          text_table.set ( key, val );
-          return this;
-          },
-        reset_text: function ( key, val ) {
-          if ( text_table.has ( key ) ) {
-            text_table.set ( key, val );
-            }
-          else {
-            prev_scope.reset_text ( key, val );
-            }
-          return this;
-          },
-        set_type: function ( key, val ) {
-          type_table.set ( key, val );
-          return this;
-          },
-        reset_type: function ( key, val ) {
-          if ( type_table.has ( key ) ) {
-            type_table.set ( key, val );
-            }
-          else {
-            prev_scope.reset_type ( key, val );
-            }
-          return this;
-          },
-        debug_print: function ( ) {
-          console.log ( 'text' );
-          this.map_text ( function ( key, val ) {
-            console.log ( key, val );
-            return val;
-            } );
-          console.log ( 'type' );
-          this.map_type ( function ( key, val ) {
-            console.log ( key, val );
-            return val;
-            } );
-          },
-        toString: function ( ) {
-          return text_table.toString ( ) + type_table.toString ( );
-          }
-        };
-      }
-    } ( );
-
   function infix ( lbp, rbp ) {
     rbp = rbp !== undefined ? rbp : lbp;
     return {
@@ -244,7 +67,7 @@ var main = function ( xregexp ) {
       };
     }
 
-  var make_parser = function ( ) {
+  var make = function ( ) {
 
     var atom = {
       lbp: 0,
@@ -257,7 +80,7 @@ var main = function ( xregexp ) {
       'text':'(end)',
       'type':'special',
       };
-    var infix_table = string_map ( {
+    var infix_table = string_map.make ( {
       '+' : 60,
       '-' : 60,
       '*' : 70,
@@ -266,25 +89,25 @@ var main = function ( xregexp ) {
       '==': 40,
       '!=': 40,
       } ).map ( function ( key, val ) { return infix ( val ); } );
-    var prefix_table = string_map ( {
+    var prefix_table = string_map.make ( {
       '+' : 80,
       '-' : 80,
       '++' : 90,
       '--' : 90,
       } ).map ( function ( key, val ) { return prefix ( val ); } );
-    var type_table = string_map ( {
+    var type_table = string_map.make ( {
       'identifier' : atom,
       'number' : atom,
       'space' : atom,
       } );
-    var escope = make_scope ( );
+    var escope = scope.make ( );
 
     escope.load_text ( infix_table );
     escope.load_text ( prefix_table );
     escope.load_type ( type_table );
 
-    var sscope = make_scope ( escope );
-    sscope.load_text ( string_map ( {
+    var sscope = scope.make ( escope );
+    sscope.load_text ( string_map.make ( {
       '=' : infix(10),
       ':' : { lbp: 0 },
       'while': {
@@ -296,7 +119,7 @@ var main = function ( xregexp ) {
           },
         },
       } ) );
-    sscope.load_type ( string_map ( {
+    sscope.load_type ( string_map.make ( {
       'identifier' : atom,
        } ) );
 
@@ -317,7 +140,7 @@ var main = function ( xregexp ) {
             }
           }
 
-        return obj_or ( Object.create ( to_clone || {} ), token );
+        return misc.obj_or ( Object.create ( to_clone || {} ), token );
         },
       get_token: function get_token ( index ) {
         var token;
@@ -448,31 +271,45 @@ var main = function ( xregexp ) {
           children.push ( this.statement ( ) );
           }
         return children;
-        }
+        },
+      setupScopes: function setupScopes ( scopes ) {
+        var escope = scopes.get ( 'expression', scope.make ( ) );
+        var sscope = scopes.get ( 'statement', scope.make ( ) );
+        escope.load_text ( infix_table );
+        escope.load_text ( prefix_table );
+        escope.load_type ( type_table );
+        sscope.load_text ( string_map.make ( {
+          '=' : infix(10),
+          ':' : { lbp: 0 },
+          'while': {
+            nud: function ( parser ) {
+              this.condition = parser.expr ( );
+              var out = parser.advance ( ':' );
+              this.block = parser.block ( );
+              return this;
+              },
+            },
+          } ) );
+        sscope.load_type ( string_map.make ( {
+          'identifier' : atom,
+           } ) );
+        },
+      parse: function parse ( text ) {
+        this.text = text;
+        return this.block ( );
+        },
       };
     return function ( text ) {
-      return obj_or ( Object.create ( root_parser ), {
+      return misc.obj_or ( Object.create ( root_parser ), {
         tokens: [],
         text: text || "",
         token_idx: -1,
         text_idx: 0,
-        scope: make_scope ( ),
+        scope: scope.make ( ),
         line_num: 0,
         } );
       };
     } ( );
-
-  var to_parse = '' +
-  'n = 100\n' +
-  'a = 1\n' +
-  'b = 1\n' +
-  'while n != 0:\n' +
-  '    temp = a + b\n' +
-  '    a = b\n' +
-  '    b = temp\n' +
-  '    n = n - 1\n';
-  console.log ( util.inspect ( make_parser ( to_parse ).block ( ), { colors: true, depth: 100 } ) );
-  console.log ( util.inspect ( make_parser ( '++apple + -1 - - bad' ).expr ( ), { colors: true, depth: 100 } ) );
-  console.log ( util.inspect ( make_parser ( 'a + 1' ).expr ( ), { colors: true, depth: 100 } ) );
+  export_val ( 'make', make );
   };
-main ( xregexp );
+main ( );
