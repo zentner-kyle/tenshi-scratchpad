@@ -15,13 +15,18 @@ else {
     };
   }
 
+var hm = require('./hindleymilner.js');
+
 var main = function main ( ) {
   function make ( )  {
     return {
       setupScopes: function ( scopes ) {
         },
       type: function ( ast ) {
-        return ast;
+	    //Call to hindleymilner.js to return a properly typed ast
+		var new_ast = ast
+		//var new_ast = hm.typecheck(ast);
+        return new_ast;
         }
       }
     }
