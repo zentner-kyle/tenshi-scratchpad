@@ -164,8 +164,8 @@ var main = function main () {
     var branch = cgen.reserve_bunch ( );
     cgen.add_temp ( -1 );
     var scope_snapshot = cgen.get_scope_snapshot ( );
-    for ( var c in this.children ) {
-      this.children[c].compile ( cgen );
+    for ( var c in this.block.children ) {
+      this.block.children[c].compile ( cgen );
       }
     cgen.apply_scope_snapshot ( scope_snapshot );
     cgen.emit ( ops.j1, start - cgen.get_pc ( ) - 1 );
@@ -183,7 +183,7 @@ var main = function main () {
   function compile_sub ( cgen ) {
     this.left.compile ( cgen );
     this.right.compile ( cgen );
-    cgen.emit ( ops.add );
+    cgen.emit ( ops.sub );
     cgen.add_temp ( -1 );
     }
 
@@ -226,6 +226,7 @@ var main = function main () {
       },
     compile: function compile ( ast ) {
       ast.compile ( cgen );
+      cgen.emit ( ops.print, ops.end );
       return cgen.code;
       },
     };

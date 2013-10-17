@@ -95,7 +95,7 @@ var main = function main ( ) {
       }),
     make_opcode ( 14, 'sub', 1, -1,
     function sub ( state ) {
-      state.push ( state.pop ( ) - state.pop ( ) );
+      state.push ( -state.pop ( ) + state.pop ( ) );
       }),
     ];
 

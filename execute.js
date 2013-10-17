@@ -17,6 +17,7 @@ else {
 
 var main = function main ( ) {
   var opcodes = require( './opcodes.js' );
+  var misc = require ( './misc.js' );
   var tables = opcodes.tables;
   var shift_bunch = function shift_bunch ( bunch, amount ) {
     for ( var i = 0; i < amount; i++ ) {
@@ -38,7 +39,14 @@ var main = function main ( ) {
       bunch: [0, 0, 0, 0],
       execute: function ( func ) {
         this.func = func;
-        this.run ( );
+        while ( this.run ) {
+          var op = this.bunch[0];
+          if ( this.debug ) {
+            this.debug_print ( );
+            }
+          tables.func[op] ( this );
+          shift_bunch ( this.bunch, tables.argc[op] );
+          }
         },
       push: function ( val ) {
         this.stack[this.stack_top] = val;
@@ -82,16 +90,6 @@ var main = function main ( ) {
           }
         console.log ( tables.name[op] + args );
         },
-      run: function ( ) {
-        while ( this.run ) {
-          var op = this.bunch[0];
-          if ( this.debug ) {
-            this.debug_print ( );
-            }
-          tables.func[op] ( this );
-          shift_bunch ( this.bunch, tables.argc[op] );
-          }
-        }
       };
     }
     export_val ( 'make', make );

@@ -266,6 +266,7 @@ var main = function ( ) {
       block: function block ( indent ) {
         var block = this.lookup_token ( { text: 'block' }, this.scopes.get ( 'statement' ) );
         var token = this.advance ( { type: 'space', peek: true, skip: null } );
+        var child;
 
         indent = indent || ( token && token.text.replace ( '\n', '' ) ) || '';
 
@@ -274,7 +275,8 @@ var main = function ( ) {
           if ( token && token.text.replace('\n', '') !== indent ) {
             return block;
             }
-          block.children.push ( this.statement ( ) );
+          child = this.statement ( );
+          block.children.push ( child );
           }
         return block;
         },
@@ -300,7 +302,7 @@ var main = function ( ) {
             },
           'block': { text: 'block',
             make: function make_block ( token ) {
-              var out = misc.obj_or ( this, token );
+              var out = misc.obj_or ( Object.create ( this ), token );
               out.children = [];
               return out;
               } },
