@@ -50,6 +50,14 @@ var main = function main () {
         prev_scope = root;
         }
       return {
+        field_text: function ( key, field, val ) {
+          var obj = this.get_text ( key, {} );
+          obj[field] = val;
+          },
+        field_type: function ( key, field, val ) {
+          var obj = this.get_type ( key, {} );
+          obj[field] = val;
+          },
         map_text: function ( func ) {
           text_table.map ( func );
           return this;
@@ -85,20 +93,28 @@ var main = function main () {
             } );
           return this;
           },
-        get_text: function ( key ) {
+        get_text: function ( key, alternative ) {
           if ( text_table.has ( key ) ) {
             return text_table.get ( key );
             }
+          else if ( alternative !== undefined ) {
+            text_table.set ( key, alternative );
+            return alternative;
+            }
           else {
-            return prev_scope.get_text ( key );
+            return prev_scope.get_text ( key, alternative );
             }
           },
-        get_type: function ( key ) {
+        get_type: function ( key, alternative ) {
           if ( type_table.has ( key ) ) {
             return type_table.get ( key );
             }
+          else if ( alternative !== undefined ) {
+            type_table.set ( key, alternative );
+            return alternative;
+            }
           else {
-            return prev_scope.get_type ( key );
+            return prev_scope.get_type ( key, alternative );
             }
           },
         set_text: function ( key, val ) {

@@ -37,17 +37,13 @@ function compile_and_run ( text ) {
   typer.setupScopes ( scopes );
 
   parse_tree = parser.parse ( text );
-  misc.print ( parse_tree );
 
   typer.type ( parse_tree );
 
   bytecode = compiler.compile ( parse_tree );
-  misc.print ( 'bytecode =', bytecode );
 
   executor.execute ( bytecode );
   }
-
-compile_and_run ( 'test = 1 + 2' );
 
 var to_parse = '' +
 'n = 100\n' +
@@ -58,3 +54,7 @@ var to_parse = '' +
 '    a = b\n' +
 '    b = temp\n' +
 '    n = n - 1\n';
+
+//compile_and_run ( 'test = 1 + 2' );
+compile_and_run ( to_parse );
+

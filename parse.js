@@ -123,24 +123,30 @@ var main = function ( ) {
       'identifier' : atom,
        } ) );
 
-    //escope.debug_print ( );
-    //sscope.debug_print ( );
-
     var root_parser = {
-      lookup_token: function lookup_token ( token ) {
+      lookup_token: function lookup_token ( token, scope ) {
         var to_clone;
+
+        if ( scope === undefined ) {
+          scope = this.scope;
+          }
 
         if ( token === undefined ) {
           to_clone = end_token;
           }
         else {
-          to_clone = this.scope.get_text ( token.text );
+          to_clone = scope.get_text ( token.text );
           if ( to_clone === undefined ) {
-            to_clone = this.scope.get_type ( token.type );
+            to_clone = scope.get_type ( token.type );
             }
           }
 
-        return misc.obj_or ( Object.create ( to_clone || {} ), token );
+        if ( to_clone !== undefined && to_clone.make !== undefined ) {
+          return to_clone.make ( token );
+          }
+
+        var out = misc.obj_or ( Object.create ( to_clone || {} ), token );
+        return out;
         },
       get_token: function get_token ( index ) {
         var token;
@@ -237,7 +243,7 @@ var main = function ( ) {
           rbp = 0;
           }
         if ( scope === undefined ) {
-          scope = escope;
+          scope = this.scopes.get ( 'statement' );
           }
 
         this.scope = scope;
@@ -255,10 +261,10 @@ var main = function ( ) {
         return this.text_idx !== this.text.length;
         },
       statement: function statement ( ) {
-        return this.expr ( 0, sscope );
+        return this.expr ( 0, this.scopes.get ( 'statement' ) );
         },
       block: function block ( indent ) {
-        var children = [];
+        var block = this.lookup_token ( { text: 'block' }, this.scopes.get ( 'statement' ) );
         var token = this.advance ( { type: 'space', peek: true, skip: null } );
 
         indent = indent || ( token && token.text.replace ( '\n', '' ) ) || '';
@@ -266,15 +272,18 @@ var main = function ( ) {
         while ( this.more ( ) ) {
           token = this.advance ( { type: 'space', peek: true, skip: null } );
           if ( token && token.text.replace('\n', '') !== indent ) {
-            return children;
+            return block;
             }
-          children.push ( this.statement ( ) );
+          block.children.push ( this.statement ( ) );
           }
-        return children;
+        return block;
         },
       setupScopes: function setupScopes ( scopes ) {
         var escope = scopes.get ( 'expression', scope.make ( ) );
-        var sscope = scopes.get ( 'statement', scope.make ( ) );
+        var sscope = scopes.get ( 'statement', scope.make ( escope ) );
+
+        this.scopes = scopes;
+
         escope.load_text ( infix_table );
         escope.load_text ( prefix_table );
         escope.load_type ( type_table );
@@ -289,13 +298,19 @@ var main = function ( ) {
               return this;
               },
             },
+          'block': { text: 'block',
+            make: function make_block ( token ) {
+              var out = misc.obj_or ( this, token );
+              out.children = [];
+              return out;
+              } },
           } ) );
         sscope.load_type ( string_map.make ( {
-          'identifier' : atom,
            } ) );
         },
       parse: function parse ( text ) {
         this.text = text;
+        this.scope = this.scopes.get ( 'statement' );
         return this.block ( );
         },
       };

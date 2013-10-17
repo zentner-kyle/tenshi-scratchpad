@@ -18,6 +18,7 @@ else {
 var main = function main () {
   var misc = require ( './misc.js' );
   var opcodes = require ( './opcodes.js' );
+  var string_map = require ( './string_map.js' );
   function make_optables ( ops ) {
     var out = {
       op: {},
@@ -179,11 +180,53 @@ var main = function main () {
     cgen.add_temp ( -1 );
     }
 
+  function compile_sub ( cgen ) {
+    this.left.compile ( cgen );
+    this.right.compile ( cgen );
+    cgen.emit ( ops.add );
+    cgen.add_temp ( -1 );
+    }
+
+
+  function compile_identifier ( cgen ) {
+    cgen.emit ( ops.dup, cgen.var_idx ( this.text ) );
+    cgen.add_temp ( 1 );
+    }
+
   var root = {
     setupScopes: function setupScopes ( scopes ) {
+      var statement_text_table = string_map.make ( {
+        'block': compile_block,
+        '=': compile_assignment,
+        'while': compile_while,
+        } );
+      statement_text_table.each ( function ( key, val ) {
+        scopes.get ( 'statement' ).field_text ( key, 'compile', val );
+        } );
+      var statement_type_table = string_map.make ( {
+        } );
+      statement_type_table.each ( function ( key, val ) {
+        scopes.get ( 'statement' ).field_type ( key, 'compile', val );
+        } );
+      var expression_type_table = string_map.make ( {
+        'number': compile_number,
+        'identifier':  compile_identifier,
+        } );
+      expression_type_table.each ( function ( key, val ) {
+        scopes.get ( 'expression' ).field_type ( key, 'compile', val );
+        } );
+      var expression_text_table = string_map.make ( {
+        '!=': compile_not_equal,
+        '+': compile_add,
+        '-': compile_sub,
+        } );
+      expression_text_table.each ( function ( key, val ) {
+        scopes.get ( 'expression' ).field_text ( key, 'compile', val );
+        } );
       },
     compile: function compile ( ast ) {
-      return [ [ opcodes.code.end ] ];
+      ast.compile ( cgen );
+      return cgen.code;
       },
     };
 

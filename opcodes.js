@@ -93,6 +93,10 @@ var main = function main ( ) {
     function pop ( state ) {
       state.pop ( );
       }),
+    make_opcode ( 14, 'sub', 1, -1,
+    function sub ( state ) {
+      state.push ( state.pop ( ) - state.pop ( ) );
+      }),
     ];
 
   function make_optables ( ops ) {
