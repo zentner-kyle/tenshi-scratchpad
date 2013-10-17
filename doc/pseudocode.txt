@@ -79,6 +79,7 @@ on data receive:
 
 
 package format:
+all numbers are 32 bits and aligned
 
   header:
     magic bytes
