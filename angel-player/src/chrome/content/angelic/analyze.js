@@ -80,6 +80,10 @@ function make ( ) {
     push_scope : function ( new_scope ) {
       misc.assert ( new_scope.above ( ) === this.current_scope,
                     "New scope should be child of current scope." ); 
+      if ( this.current_scope.children === undefined ) {
+        this.current_scope.children = [];
+        }
+      this.current_scope.children.push ( new_scope );
       this.current_scope = new_scope;
       this.scope_depth += 1;
       this.unknownses.push ( scope.make ( ) );
@@ -306,52 +310,6 @@ function setupScopes ( scopes ) {
   escope.load_text ( escope_text_methods );
   escope.load_type ( escope_type_methods );
   }
-
-//function analyze ( ast ) {
-  //var root_module = module.make ( '' );
-  //var core_module = make_core_module ( );
-  //root_module.ast = ast;
-  //var analyzer = make_analyzer ( root_module );
-  //analyzer.recurse ( ast );
-  //analyzer.finalize_module ( );
-  //// TODO(kzentner): Add support for modules besides the core module.
-  //root_module.imports.each_text ( function ( key, imprts ) {
-    //var res = core_module.exports.get_text ( key );
-    //if ( res !== undefined ) {
-      //imprts.forEach ( function ( imprt ) {
-        //imprt.callback ( res );
-        //} );
-      //}
-    //} );
-  ////misc.print ( analyzer.variables );
-  //return {
-    //'': root_module,
-    //'core': core_module,
-    //'variables:': analyzer.variables,
-    //};
-  //}
-
-//function make_helper ( ) {
-  //return {
-    //analyze: analyze,
-    //};
-  //}
-
-//function full_analyze ( parse_tree ) {
-  //var a_analyzer = make_helper ( );
-  //var modules = a_analyzer.analyze ( parse_tree );
-  //var module = modules[''];
-  //this.map = generate_canonical_map ( module );
-  //generate_enumerations ( this.map );
-  //this.all_objects = extract_all_objs ( module );
-  //}
-
-//function make ( ) {
-  //return {
-    //analyze: full_analyze,
-    //setupScopes: setupScopes,
-    //};
-  //}
 
 var next_external_obj_id = 0;
 
