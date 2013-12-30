@@ -129,6 +129,12 @@ function make ( ) {
       if ( node.analyze !== undefined ) {
         return node.analyze ( this );
         }
+      else if ( node.recurse !== undefined ) {
+        var self = this;
+        return node.recurse ( function ( child ) {
+          self.recurse ( child );
+          } );
+        }
       else {
         throw 'Could not analyze ' + JSON.stringify ( node, null, '  ' );
         }
@@ -264,10 +270,6 @@ function infix ( text ) {
 var escope_text_methods = string_map.make ( {
   '(' : {
     analyze : function ( analyzer ) {
-      analyzer.recurse ( this.func );
-      this.args.forEach ( function ( arg ) {
-        analyzer.recurse ( arg );
-        } );
       },
     },
   '-' : infix ( '-' ),
