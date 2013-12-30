@@ -65,24 +65,20 @@ function compile_and_run ( text ) {
   //misc.print ( a_analyzer.map );
   //misc.print ( a_analyzer.all_objects );
 
-  //a_inferencer.infer ( a_analyzer.map );
+  //misc.print ( a_analyzer.variables );
   a_inferencer.infer ( parse_tree );
 
-  a_compiler.compile_objs ( a_analyzer.all_objects );
+  //a_compiler.compile_objs ( a_analyzer.all_objects );
 
   //misc.print ( a_analyzer.map );
   //misc.print ( a_analyzer.root_module );
   //misc.print ( a_analyzer.all_objects );
   //misc.print ( a_analyzer.variables );
 
-  a_library.build_all_objects ( a_analyzer.all_objects );
-  a_executor.run_code ( a_analyzer.map.get_text ( 'main' ).code );
+  //a_library.build_all_objects ( a_analyzer.all_objects );
+  //a_executor.run_code ( a_analyzer.map.get_text ( 'main' ).code );
 
   //misc.print ( parse_tree );
-
-  //lib = a_compiler.compile ( parse_tree );
-
-  //a_executor.execute ( lib );
   }
 
 //var to_parse = '' +
